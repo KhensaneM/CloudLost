@@ -1,0 +1,364 @@
+/* ================================
+   CLOUDLOST - MAIN STYLESHEET
+   ================================ */
+
+/* Reset default browser spacing */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ================================
+   GENERAL
+   ================================ */
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f5f7fa;
+    color: #1f2937;
+    line-height: 1.6;
+}
+
+
+/* ================================
+   NAVIGATION BAR
+   ================================ */
+
+.navbar {
+    background-color: #ffffff;
+    padding: 20px 8%;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2563eb;
+}
+
+nav {
+    display: flex;
+    align-items: center;
+}
+
+nav a {
+    text-decoration: none;
+    color: #374151;
+
+    margin-left: 30px;
+
+    font-weight: 500;
+
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: #2563eb;
+}
+
+
+/* ================================
+   HERO SECTION
+   ================================ */
+
+.hero {
+    min-height: 500px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    text-align: center;
+
+    padding: 60px 20px;
+
+    background: linear-gradient(
+        135deg,
+        #eff6ff,
+        #dbeafe
+    );
+}
+
+.hero-content {
+    max-width: 750px;
+}
+
+.hero h1 {
+    font-size: 56px;
+    color: #1e3a8a;
+
+    margin-bottom: 10px;
+}
+
+.hero h2 {
+    font-size: 36px;
+    color: #2563eb;
+
+    margin-bottom: 20px;
+}
+
+.hero p {
+    font-size: 18px;
+    color: #4b5563;
+
+    line-height: 1.7;
+
+    margin-bottom: 35px;
+}
+
+
+/* ================================
+   BUTTONS
+   ================================ */
+
+.hero-buttons {
+    display: flex;
+    justify-content: center;
+
+    gap: 20px;
+
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-block;
+
+    padding: 14px 25px;
+
+    border-radius: 8px;
+
+    text-decoration: none;
+
+    font-weight: bold;
+
+    transition:
+        transform 0.2s ease,
+        background-color 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+
+/* Lost item button */
+
+.btn-lost {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+.btn-lost:hover {
+    background-color: #b91c1c;
+}
+
+
+/* Found item button */
+
+.btn-found {
+    background-color: #16a34a;
+    color: #ffffff;
+}
+
+.btn-found:hover {
+    background-color: #15803d;
+}
+
+
+/* Browse button */
+
+.btn-browse {
+    background-color: #2563eb;
+    color: #ffffff;
+
+    margin-top: 20px;
+}
+
+.btn-browse:hover {
+    background-color: #1d4ed8;
+}
+
+
+/* ================================
+   HOW IT WORKS SECTION
+   ================================ */
+
+.how-it-works {
+    padding: 80px 8%;
+
+    text-align: center;
+
+    background-color: #ffffff;
+}
+
+.how-it-works h2 {
+    font-size: 34px;
+
+    color: #1f2937;
+
+    margin-bottom: 45px;
+}
+
+.steps {
+    display: flex;
+
+    justify-content: center;
+
+    gap: 30px;
+
+    flex-wrap: wrap;
+}
+
+.step-card {
+    background-color: #f9fafb;
+
+    padding: 35px;
+
+    border-radius: 12px;
+
+    width: 280px;
+
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.step-card:hover {
+    transform: translateY(-5px);
+
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.step-icon {
+    font-size: 42px;
+
+    margin-bottom: 15px;
+}
+
+.step-card h3 {
+    color: #1e3a8a;
+
+    margin-bottom: 10px;
+}
+
+.step-card p {
+    color: #6b7280;
+
+    line-height: 1.5;
+}
+
+
+/* ================================
+   BROWSE SECTION
+   ================================ */
+
+.browse-section {
+    padding: 70px 20px;
+
+    text-align: center;
+
+    background-color: #eff6ff;
+}
+
+.browse-section h2 {
+    font-size: 32px;
+
+    color: #1e3a8a;
+
+    margin-bottom: 10px;
+}
+
+.browse-section p {
+    color: #6b7280;
+
+    font-size: 17px;
+}
+
+
+/* ================================
+   FOOTER
+   ================================ */
+
+footer {
+    background-color: #111827;
+
+    color: #d1d5db;
+
+    text-align: center;
+
+    padding: 25px;
+}
+
+
+/* ================================
+   MOBILE RESPONSIVE DESIGN
+   ================================ */
+
+@media (max-width: 700px) {
+
+    .navbar {
+        flex-direction: column;
+
+        gap: 20px;
+
+        padding: 20px;
+    }
+
+    nav {
+        flex-wrap: wrap;
+
+        justify-content: center;
+
+        gap: 15px;
+    }
+
+    nav a {
+        margin-left: 0;
+    }
+
+    .hero {
+        min-height: 450px;
+
+        padding: 50px 20px;
+    }
+
+    .hero h1 {
+        font-size: 40px;
+    }
+
+    .hero h2 {
+        font-size: 27px;
+    }
+
+    .hero p {
+        font-size: 16px;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+
+        align-items: center;
+    }
+
+    .btn {
+        width: 220px;
+    }
+
+    .steps {
+        flex-direction: column;
+
+        align-items: center;
+    }
+
+    .how-it-works {
+        padding: 60px 20px;
+    }
+}
