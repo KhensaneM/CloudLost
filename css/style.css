@@ -1,17 +1,18 @@
-/* ================================
+/* =========================================
    CLOUDLOST - MAIN STYLESHEET
-   ================================ */
+   ========================================= */
 
-/* Reset default browser spacing */
+/* RESET */
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* ================================
-   GENERAL
-   ================================ */
+html {
+    scroll-behavior: smooth;
+}
 
 body {
     font-family: Arial, Helvetica, sans-serif;
@@ -21,9 +22,9 @@ body {
 }
 
 
-/* ================================
-   NAVIGATION BAR
-   ================================ */
+/* =========================================
+   NAVIGATION
+   ========================================= */
 
 .navbar {
     background-color: #ffffff;
@@ -34,6 +35,9 @@ body {
     align-items: center;
 
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+
+    position: relative;
+    z-index: 10;
 }
 
 .logo {
@@ -45,14 +49,12 @@ body {
 nav {
     display: flex;
     align-items: center;
+    gap: 30px;
 }
 
 nav a {
     text-decoration: none;
     color: #374151;
-
-    margin-left: 30px;
-
     font-weight: 500;
 
     transition: color 0.3s ease;
@@ -63,9 +65,9 @@ nav a:hover {
 }
 
 
-/* ================================
-   HERO SECTION
-   ================================ */
+/* =========================================
+   HOMEPAGE - HERO
+   ========================================= */
 
 .hero {
     min-height: 500px;
@@ -107,15 +109,13 @@ nav a:hover {
     font-size: 18px;
     color: #4b5563;
 
-    line-height: 1.7;
-
     margin-bottom: 35px;
 }
 
 
-/* ================================
+/* =========================================
    BUTTONS
-   ================================ */
+   ========================================= */
 
 .hero-buttons {
     display: flex;
@@ -147,7 +147,7 @@ nav a:hover {
 }
 
 
-/* Lost item button */
+/* LOST BUTTON */
 
 .btn-lost {
     background-color: #dc2626;
@@ -159,7 +159,7 @@ nav a:hover {
 }
 
 
-/* Found item button */
+/* FOUND BUTTON */
 
 .btn-found {
     background-color: #16a34a;
@@ -171,7 +171,7 @@ nav a:hover {
 }
 
 
-/* Browse button */
+/* BROWSE BUTTON */
 
 .btn-browse {
     background-color: #2563eb;
@@ -185,9 +185,9 @@ nav a:hover {
 }
 
 
-/* ================================
-   HOW IT WORKS SECTION
-   ================================ */
+/* =========================================
+   HOW CLOUDLOST WORKS
+   ========================================= */
 
 .how-it-works {
     padding: 80px 8%;
@@ -216,13 +216,13 @@ nav a:hover {
 }
 
 .step-card {
+    width: 280px;
+
     background-color: #f9fafb;
 
     padding: 35px;
 
     border-radius: 12px;
-
-    width: 280px;
 
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
 
@@ -251,14 +251,12 @@ nav a:hover {
 
 .step-card p {
     color: #6b7280;
-
-    line-height: 1.5;
 }
 
 
-/* ================================
-   BROWSE SECTION
-   ================================ */
+/* =========================================
+   HOMEPAGE - BROWSE SECTION
+   ========================================= */
 
 .browse-section {
     padding: 70px 20px;
@@ -283,9 +281,180 @@ nav a:hover {
 }
 
 
-/* ================================
+/* =========================================
+   REPORT PAGE
+   ========================================= */
+
+.report-page {
+    min-height: calc(100vh - 160px);
+
+    padding: 60px 20px;
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+
+    background-color: #f5f7fa;
+}
+
+.report-container {
+    width: 100%;
+    max-width: 700px;
+
+    background-color: #ffffff;
+
+    padding: 40px;
+
+    border-radius: 12px;
+
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.report-container h1 {
+    text-align: center;
+
+    color: #1e3a8a;
+
+    font-size: 34px;
+
+    margin-bottom: 10px;
+}
+
+.report-intro {
+    text-align: center;
+
+    color: #6b7280;
+
+    margin-bottom: 35px;
+}
+
+
+/* =========================================
+   REPORT FORM
+   ========================================= */
+
+.form-group {
+    margin-bottom: 22px;
+}
+
+.form-group label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #374151;
+
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+
+    padding: 12px 14px;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 7px;
+
+    background-color: #ffffff;
+
+    color: #1f2937;
+
+    font-size: 16px;
+
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.form-group textarea {
+    min-height: 120px;
+
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+
+    border-color: #2563eb;
+
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-group input[type="file"] {
+    padding: 10px;
+
+    cursor: pointer;
+}
+
+.form-group small {
+    display: block;
+
+    margin-top: 7px;
+
+    color: #6b7280;
+
+    font-size: 13px;
+}
+
+
+/* =========================================
+   SUBMIT BUTTON
+   ========================================= */
+
+.submit-btn {
+    width: 100%;
+
+    padding: 14px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    background-color: #2563eb;
+
+    color: #ffffff;
+
+    font-size: 16px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.3s ease,
+        transform 0.2s ease;
+}
+
+.submit-btn:hover {
+    background-color: #1d4ed8;
+
+    transform: translateY(-1px);
+}
+
+.submit-btn:active {
+    transform: translateY(0);
+}
+
+
+/* =========================================
+   FORM MESSAGE
+   ========================================= */
+
+#form-message {
+    margin-top: 20px;
+
+    text-align: center;
+
+    font-weight: bold;
+}
+
+
+/* =========================================
    FOOTER
-   ================================ */
+   ========================================= */
 
 footer {
     background-color: #111827;
@@ -298,31 +467,30 @@ footer {
 }
 
 
-/* ================================
+/* =========================================
    MOBILE RESPONSIVE DESIGN
-   ================================ */
+   ========================================= */
 
 @media (max-width: 700px) {
 
     .navbar {
         flex-direction: column;
 
-        gap: 20px;
+        gap: 18px;
 
         padding: 20px;
     }
 
     nav {
-        flex-wrap: wrap;
-
         justify-content: center;
+
+        flex-wrap: wrap;
 
         gap: 15px;
     }
 
-    nav a {
-        margin-left: 0;
-    }
+
+    /* HOME */
 
     .hero {
         min-height: 450px;
@@ -360,5 +528,20 @@ footer {
 
     .how-it-works {
         padding: 60px 20px;
+    }
+
+
+    /* REPORT PAGE */
+
+    .report-page {
+        padding: 30px 15px;
+    }
+
+    .report-container {
+        padding: 25px 20px;
+    }
+
+    .report-container h1 {
+        font-size: 28px;
     }
 }

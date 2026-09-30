@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Report Item | CloudLost</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<header class="navbar">
+    <div class="logo">☁️ CloudLost</div>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="items.html">Browse Items</a>
+        <a href="report.html">Report Item</a>
+    </nav>
+</header>
+
+
+<main class="report-page">
+
+    <section class="report-container">
+
+        <h1 id="report-title">Report an Item</h1>
+
+        <p class="report-intro">
+            Provide as much information as possible to help
+            reconnect the item with its owner.
+        </p>
+
+        <form id="report-form">
+
+            <div class="form-group">
+                <label for="type">Report Type</label>
+
+                <select id="type" name="type" required>
+                    <option value="">Select report type</option>
+                    <option value="lost">Lost Item</option>
+                    <option value="found">Found Item</option>
+                </select>
+            </div>
+
+
+            <div class="form-group">
+                <label for="item-name">Item Name</label>
+
+                <input
+                    type="text"
+                    id="item-name"
+                    name="itemName"
+                    placeholder="Example: Black Backpack"
+                    required
+                >
+            </div>
+
+
+            <div class="form-group">
+                <label for="category">Category</label>
+
+                <select id="category" name="category" required>
+                    <option value="">Select a category</option>
+                    <option value="electronics">Electronics</option>
+                    <option value="bags">Bags</option>
+                    <option value="keys">Keys</option>
+                    <option value="documents">Documents</option>
+                    <option value="clothing">Clothing</option>
+                    <option value="jewellery">Jewellery</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+
+            <div class="form-group">
+                <label for="description">Description</label>
+
+                <textarea
+                    id="description"
+                    name="description"
+                    rows="5"
+                    placeholder="Describe the item..."
+                    required
+                ></textarea>
+            </div>
+
+
+            <div class="form-group">
+                <label for="location">Location</label>
+
+                <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    placeholder="Where was the item lost or found?"
+                    required
+                >
+            </div>
+
+
+            <div class="form-group">
+                <label for="date">Date Lost / Found</label>
+
+                <input
+                    type="date"
+                    id="date"
+                    name="date"
+                    required
+                >
+            </div>
+
+
+            <div class="form-group">
+                <label for="image">Item Photo</label>
+
+                <input
+                    type="file"
+                    id="image"
+                    name="image"
+                    accept="image/*"
+                >
+
+                <small>
+                    Uploading the image to AWS will be added later.
+                </small>
+            </div>
+
+
+            <button type="submit" class="submit-btn">
+                Submit Report
+            </button>
+
+        </form>
+
+        <div id="form-message"></div>
+
+    </section>
+
+</main>
+
+
+<footer>
+    <p>© 2026 CloudLost | Cloud-Based Lost & Found System</p>
+</footer>
+
+
+<script src="js/app.js"></script>
+
+</body>
+</html>
