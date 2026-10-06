@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Browse Items | CloudLost</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<header class="navbar">
+    <div class="logo">☁️ CloudLost</div>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="items.html">Browse Items</a>
+        <a href="report.html">Report Item</a>
+    </nav>
+</header>
+
+
+<main class="items-page">
+
+    <section class="items-header">
+        <h1>Browse Reported Items</h1>
+
+        <p>
+            Search through lost and found items reported on CloudLost.
+        </p>
+    </section>
+
+
+    <section class="filters">
+
+        <input
+            type="text"
+            id="search-input"
+            placeholder="Search for an item..."
+        >
+
+        <select id="type-filter">
+            <option value="all">All Reports</option>
+            <option value="lost">Lost Items</option>
+            <option value="found">Found Items</option>
+        </select>
+
+        <select id="category-filter">
+            <option value="all">All Categories</option>
+            <option value="electronics">Electronics</option>
+            <option value="bags">Bags</option>
+            <option value="keys">Keys</option>
+            <option value="documents">Documents</option>
+            <option value="clothing">Clothing</option>
+            <option value="jewellery">Jewellery</option>
+            <option value="other">Other</option>
+        </select>
+
+    </section>
+
+
+    <section class="items-grid" id="items-grid">
+
+        <div class="empty-items">
+            <div class="empty-icon">🔎</div>
+
+            <h2>No items to display yet</h2>
+
+            <p>
+                Reported items will appear here once CloudLost
+                is connected to AWS.
+            </p>
+
+            <a href="report.html" class="btn btn-browse">
+                Report an Item
+            </a>
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer>
+    <p>© 2026 CloudLost | Cloud-Based Lost & Found System</p>
+</footer>
+
+<script src="js/app.js"></script>
+
+</body>
+</html>
