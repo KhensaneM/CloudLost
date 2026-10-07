@@ -5,136 +5,331 @@
 const fs = require("fs");
 const path = require("path");
 
-function loadReportPage(url = "/report.html") {
-    document.body.innerHTML = `
-        <h1 id="report-title">Report an Item</h1>
+const APP_JS_PATH = path.join(__dirname, "../js/app.js");
 
-        <form id="report-form">
-            <select id="type">
-                <option value="">Select report type</option>
-                <option value="lost">Lost Item</option>
-                <option value="found">Found Item</option>
-            </select>
+const API_URL =
+    "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com/items";
 
-            <input id="item-name">
+const reportPageHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CloudLost Test</title>
+</head>
 
-            <select id="category">
-                <option value="">Select category</option>
-                <option value="bags">Bags</option>
-            </select>
+<body>
 
-            <textarea id="description"></textarea>
+    <h1 id="report-title">Report an Item</h1>
 
-            <input id="location">
+    <form id="report-form">
 
-            <input id="date" type="date">
+        <select id="type" name="type">
+            <option value="">Select report type</option>
+            <option value="lost">Lost Item</option>
+            <option value="found">Found Item</option>
+        </select>
 
-            <button type="submit">Submit Report</button>
-        </form>
+        <input
+            type="text"
+            id="item-name"
+            name="itemName"
+        >
 
-        <div id="form-message"></div>
-    `;
+        <select id="category" name="category">
+            <option value="">Select category</option>
+            <option value="bags">Bags</option>
+            <option value="electronics">Electronics</option>
+            <option value="other">Other</option>
+        </select>
 
-    window.history.pushState({}, "", url);
+        <textarea
+            id="description"
+            name="description"
+        ></textarea>
 
-    const script = fs.readFileSync(
-        path.resolve(__dirname, "../js/app.js"),
-        "utf8"
+        <input
+            type="text"
+            id="location"
+            name="location"
+        >
+
+        <input
+            type="date"
+            id="date"
+            name="date"
+        >
+
+        <button type="submit">
+            Submit Report
+        </button>
+
+    </form>
+
+    <div id="form-message"></div>
+
+</body>
+</html>
+`;
+
+function loadReportPage(search = "") {
+
+    // Replace the document body for every test.
+    document.body.innerHTML = reportPageHtml;
+
+    window.history.replaceState(
+        {},
+        "",
+        `/report.html${search}`
     );
 
-    eval(script);
+    const appCode =
+        fs.readFileSync(APP_JS_PATH, "utf8");
 
-    document.dispatchEvent(new Event("DOMContentLoaded"));
+    /*
+     * app.js normally waits for DOMContentLoaded.
+     *
+     * Instead of dispatching DOMContentLoaded on the real
+     * document repeatedly, capture the callback and run it once.
+     * This prevents event listeners from previous tests building up.
+     */
+
+    let domReadyCallback = null;
+
+    const originalAddEventListener =
+        document.addEventListener.bind(document);
+
+    document.addEventListener = jest.fn(
+        (eventName, callback, options) => {
+
+            if (eventName === "DOMContentLoaded") {
+                domReadyCallback = callback;
+                return;
+            }
+
+            originalAddEventListener(
+                eventName,
+                callback,
+                options
+            );
+        }
+    );
+
+    eval(appCode);
+
+    document.addEventListener =
+        originalAddEventListener;
+
+    if (domReadyCallback) {
+        domReadyCallback();
+    }
+}
+
+function fillReportForm() {
+
+    document.getElementById("type").value =
+        "lost";
+
+    document.getElementById("item-name").value =
+        "Blue Backpack";
+
+    document.getElementById("category").value =
+        "bags";
+
+    document.getElementById("description").value =
+        "Blue school backpack";
+
+    document.getElementById("location").value =
+        "Campus";
+
+    document.getElementById("date").value =
+        "2026-10-07";
+}
+
+function submitReportForm() {
+
+    const form =
+        document.getElementById("report-form");
+
+    const event = new Event("submit", {
+        bubbles: true,
+        cancelable: true,
+    });
+
+    form.dispatchEvent(event);
+
+    return event;
 }
 
 describe("CloudLost report form", () => {
 
     beforeEach(() => {
-        document.body.innerHTML = "";
-        window.history.pushState({}, "", "/");
-    });
 
-    test("selects Lost Item when type=lost is in the URL", () => {
-        loadReportPage("/report.html?type=lost");
+        jest.clearAllMocks();
 
-        expect(
-            document.getElementById("type").value
-        ).toBe("lost");
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
 
-        expect(
-            document.getElementById("report-title").textContent
-        ).toBe("Report a Lost Item");
-    });
-
-    test("selects Found Item when type=found is in the URL", () => {
-        loadReportPage("/report.html?type=found");
-
-        expect(
-            document.getElementById("type").value
-        ).toBe("found");
-
-        expect(
-            document.getElementById("report-title").textContent
-        ).toBe("Report a Found Item");
-    });
-
-    test("changes heading when report type changes", () => {
-        loadReportPage();
-
-        const type = document.getElementById("type");
-
-        type.value = "lost";
-        type.dispatchEvent(new Event("change"));
-
-        expect(
-            document.getElementById("report-title").textContent
-        ).toBe("Report a Lost Item");
-
-        type.value = "found";
-        type.dispatchEvent(new Event("change"));
-
-        expect(
-            document.getElementById("report-title").textContent
-        ).toBe("Report a Found Item");
-    });
-
-    test("prevents normal form submission", () => {
-        loadReportPage("/report.html?type=lost");
-
-        document.getElementById("item-name").value =
-            "Black Backpack";
-
-        document.getElementById("category").value =
-            "bags";
-
-        document.getElementById("description").value =
-            "Black backpack with laptop sleeve";
-
-        document.getElementById("location").value =
-            "Campus";
-
-        document.getElementById("date").value =
-            "2026-10-07";
-
-        const form =
-            document.getElementById("report-form");
-
-        const submitEvent = new Event("submit", {
-            bubbles: true,
-            cancelable: true
+            json: jest.fn().mockResolvedValue({
+                message:
+                    "Item reported successfully",
+            }),
         });
 
-        form.dispatchEvent(submitEvent);
-
-        expect(submitEvent.defaultPrevented)
-            .toBe(true);
-
-        expect(
-            document.getElementById("form-message")
-                .textContent
-        ).toBe(
-            "Report ready! AWS connection will be added next."
-        );
+        window.fetch = global.fetch;
     });
+
+    afterEach(() => {
+
+        delete global.fetch;
+        delete window.fetch;
+
+        document.body.innerHTML = "";
+    });
+
+    test(
+        "selects Lost Item when type=lost is in the URL",
+        () => {
+
+            loadReportPage("?type=lost");
+
+            expect(
+                document.getElementById("type").value
+            ).toBe("lost");
+
+            expect(
+                document.getElementById(
+                    "report-title"
+                ).textContent
+            ).toBe("Report a Lost Item");
+        }
+    );
+
+    test(
+        "selects Found Item when type=found is in the URL",
+        () => {
+
+            loadReportPage("?type=found");
+
+            expect(
+                document.getElementById("type").value
+            ).toBe("found");
+
+            expect(
+                document.getElementById(
+                    "report-title"
+                ).textContent
+            ).toBe("Report a Found Item");
+        }
+    );
+
+    test(
+        "changes heading when report type changes",
+        () => {
+
+            loadReportPage();
+
+            const reportType =
+                document.getElementById("type");
+
+            const reportTitle =
+                document.getElementById(
+                    "report-title"
+                );
+
+            reportType.value = "lost";
+
+            reportType.dispatchEvent(
+                new Event("change", {
+                    bubbles: true,
+                })
+            );
+
+            expect(
+                reportTitle.textContent
+            ).toBe("Report a Lost Item");
+
+            reportType.value = "found";
+
+            reportType.dispatchEvent(
+                new Event("change", {
+                    bubbles: true,
+                })
+            );
+
+            expect(
+                reportTitle.textContent
+            ).toBe("Report a Found Item");
+        }
+    );
+
+    test(
+        "prevents normal form submission",
+        () => {
+
+            loadReportPage("?type=lost");
+
+            fillReportForm();
+
+            const event =
+                submitReportForm();
+
+            expect(
+                event.defaultPrevented
+            ).toBe(true);
+        }
+    );
+
+    test(
+        "sends the report to the CloudLost API",
+        async () => {
+
+            loadReportPage("?type=lost");
+
+            fillReportForm();
+
+            submitReportForm();
+
+            await new Promise(
+                (resolve) =>
+                    setTimeout(resolve, 0)
+            );
+
+            expect(fetch)
+                .toHaveBeenCalledTimes(1);
+
+            expect(fetch)
+                .toHaveBeenCalledWith(
+                    API_URL,
+                    expect.objectContaining({
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+                    })
+                );
+
+            const fetchOptions =
+                fetch.mock.calls[0][1];
+
+            const requestBody =
+                JSON.parse(
+                    fetchOptions.body
+                );
+
+            expect(requestBody).toEqual({
+                type: "lost",
+                itemName: "Blue Backpack",
+                category: "bags",
+                description:
+                    "Blue school backpack",
+                location: "Campus",
+                date: "2026-10-07",
+                status: "OPEN",
+            });
+        }
+    );
 
 });

@@ -1,5 +1,8 @@
 document.addEventListener("DOMContentLoaded", function () {
 
+    const API_URL =
+        "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com/items";
+
     const reportForm = document.getElementById("report-form");
     const reportType = document.getElementById("type");
     const reportTitle = document.getElementById("report-title");
@@ -40,18 +43,25 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
+        // Send report to AWS when the form is submitted
+        reportForm.addEventListener("submit", async function (event) {
 
-        // Handle form submission
-        reportForm.addEventListener("submit", function (event) {
-
-            // Prevent normal HTML form submission
             event.preventDefault();
 
-            const itemName = document.getElementById("item-name").value;
-            const category = document.getElementById("category").value;
-            const description = document.getElementById("description").value;
-            const location = document.getElementById("location").value;
-            const date = document.getElementById("date").value;
+            const itemName =
+                document.getElementById("item-name").value;
+
+            const category =
+                document.getElementById("category").value;
+
+            const description =
+                document.getElementById("description").value;
+
+            const location =
+                document.getElementById("location").value;
+
+            const date =
+                document.getElementById("date").value;
 
             const reportData = {
                 type: reportType.value,
@@ -63,18 +73,47 @@ document.addEventListener("DOMContentLoaded", function () {
                 status: "OPEN"
             };
 
-            // For now, display the data in the browser console.
-            // Later this will be sent to AWS API Gateway.
             console.log("CloudLost Report:", reportData);
 
             if (formMessage) {
-                formMessage.textContent =
-                    "Report ready! AWS connection will be added next.";
+                formMessage.textContent = "Submitting report...";
             }
 
-            // Do not clear the form yet.
-            // This makes testing easier while developing.
+            try {
+
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(reportData)
+                });
+
+                if (!response.ok) {
+                    throw new Error("Unable to submit report");
+                }
+
+                const result = await response.json();
+
+                console.log("AWS Response:", result);
+
+                if (formMessage) {
+                    formMessage.textContent =
+                        "Item reported successfully!";
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Error submitting report:",
+                    error
+                );
+
+                if (formMessage) {
+                    formMessage.textContent =
+                        "Unable to submit report. Please try again.";
+                }
+            }
         });
     }
-
 });
