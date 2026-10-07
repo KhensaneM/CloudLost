@@ -72,27 +72,51 @@ const reportPageHtml = `
 </html>
 `;
 
-function loadReportPage(search = "") {
+const browsePageHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Browse Items | CloudLost</title>
+</head>
 
-    // Replace the document body for every test.
-    document.body.innerHTML = reportPageHtml;
+<body>
 
-    window.history.replaceState(
-        {},
-        "",
-        `/report.html${search}`
-    );
+    <input
+        type="text"
+        id="search-input"
+        placeholder="Search for an item..."
+    >
 
+    <select id="type-filter">
+        <option value="all">All Reports</option>
+        <option value="lost">Lost Items</option>
+        <option value="found">Found Items</option>
+    </select>
+
+    <select id="category-filter">
+        <option value="all">All Categories</option>
+        <option value="electronics">Electronics</option>
+        <option value="bags">Bags</option>
+        <option value="keys">Keys</option>
+        <option value="documents">Documents</option>
+        <option value="clothing">Clothing</option>
+        <option value="jewellery">Jewellery</option>
+        <option value="other">Other</option>
+    </select>
+
+    <section
+        class="items-grid"
+        id="items-grid"
+    ></section>
+
+</body>
+</html>
+`;
+
+function runAppCode() {
     const appCode =
         fs.readFileSync(APP_JS_PATH, "utf8");
-
-    /*
-     * app.js normally waits for DOMContentLoaded.
-     *
-     * Instead of dispatching DOMContentLoaded on the real
-     * document repeatedly, capture the callback and run it once.
-     * This prevents event listeners from previous tests building up.
-     */
 
     let domReadyCallback = null;
 
@@ -125,8 +149,33 @@ function loadReportPage(search = "") {
     }
 }
 
-function fillReportForm() {
+function loadReportPage(search = "") {
+    document.body.innerHTML =
+        reportPageHtml;
 
+    window.history.replaceState(
+        {},
+        "",
+        `/report.html${search}`
+    );
+
+    runAppCode();
+}
+
+function loadBrowsePage() {
+    document.body.innerHTML =
+        browsePageHtml;
+
+    window.history.replaceState(
+        {},
+        "",
+        "/items.html"
+    );
+
+    runAppCode();
+}
+
+function fillReportForm() {
     document.getElementById("type").value =
         "lost";
 
@@ -147,7 +196,6 @@ function fillReportForm() {
 }
 
 function submitReportForm() {
-
     const form =
         document.getElementById("report-form");
 
@@ -161,10 +209,10 @@ function submitReportForm() {
     return event;
 }
 
+
 describe("CloudLost report form", () => {
 
     beforeEach(() => {
-
         jest.clearAllMocks();
 
         global.fetch = jest.fn().mockResolvedValue({
@@ -180,12 +228,12 @@ describe("CloudLost report form", () => {
     });
 
     afterEach(() => {
-
         delete global.fetch;
         delete window.fetch;
 
         document.body.innerHTML = "";
     });
+
 
     test(
         "selects Lost Item when type=lost is in the URL",
@@ -205,6 +253,7 @@ describe("CloudLost report form", () => {
         }
     );
 
+
     test(
         "selects Found Item when type=found is in the URL",
         () => {
@@ -222,6 +271,7 @@ describe("CloudLost report form", () => {
             ).toBe("Report a Found Item");
         }
     );
+
 
     test(
         "changes heading when report type changes",
@@ -263,6 +313,7 @@ describe("CloudLost report form", () => {
         }
     );
 
+
     test(
         "prevents normal form submission",
         () => {
@@ -279,6 +330,7 @@ describe("CloudLost report form", () => {
             ).toBe(true);
         }
     );
+
 
     test(
         "sends the report to the CloudLost API",
@@ -331,5 +383,69 @@ describe("CloudLost report form", () => {
             });
         }
     );
+});
 
+
+describe("CloudLost browse items", () => {
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+
+            json: jest.fn().mockResolvedValue({
+                items: [
+                    {
+                        itemId: "123",
+                        type: "lost",
+                        itemName:
+                            "Black Backpack",
+                        category: "bags",
+                        description:
+                            "Black backpack with laptop sleeve",
+                        location: "Campus",
+                        date: "2026-10-07",
+                        status: "OPEN",
+                    },
+                ],
+            }),
+        });
+
+        window.fetch = global.fetch;
+    });
+
+
+    afterEach(() => {
+        delete global.fetch;
+        delete window.fetch;
+
+        document.body.innerHTML = "";
+    });
+
+
+    test(
+        "displays items returned by the CloudLost API",
+        async () => {
+
+            loadBrowsePage();
+
+            await new Promise(
+                (resolve) =>
+                    setTimeout(resolve, 0)
+            );
+
+            expect(fetch)
+                .toHaveBeenCalledWith(API_URL);
+
+            const itemsGrid =
+                document.getElementById(
+                    "items-grid"
+                );
+
+            expect(
+                itemsGrid.textContent
+            ).toContain("Black Backpack");
+        }
+    );
 });
