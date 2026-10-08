@@ -11,6 +11,10 @@ const APP_JS_PATH = path.join(__dirname, "../js/app.js");
 const API_URL =
     "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com/items";
 
+// ======================================================
+// TEST HTML
+// ======================================================
+
 const reportPageHtml = `
     <h1 id="report-title">Report an Item</h1>
 
@@ -24,7 +28,6 @@ const reportPageHtml = `
         <input id="item-name" type="text">
 
         <select id="category">
-            <option value="">Select category</option>
             <option value="bags">Bags</option>
             <option value="electronics">Electronics</option>
             <option value="other">Other</option>
@@ -67,6 +70,18 @@ const browsePageHtml = `
     <section id="items-grid"></section>
 `;
 
+const itemDetailsPageHtml = `
+    <section id="item-details-container">
+        <div class="empty-items">
+            <h2>Loading item details...</h2>
+        </div>
+    </section>
+`;
+
+// ======================================================
+// MOCK AWS DATA
+// ======================================================
+
 const mockItems = [
     {
         itemId: "1",
@@ -99,6 +114,10 @@ const mockItems = [
         status: "OPEN"
     }
 ];
+
+// ======================================================
+// TEST HELPERS
+// ======================================================
 
 function runAppCode() {
     const appCode = fs.readFileSync(APP_JS_PATH, "utf8");
@@ -159,14 +178,31 @@ function loadBrowsePage() {
     runAppCode();
 }
 
+function loadItemDetailsPage(itemId) {
+    document.body.innerHTML = itemDetailsPageHtml;
+
+    window.history.replaceState(
+        {},
+        "",
+        `/item-details.html?id=${encodeURIComponent(itemId)}`
+    );
+
+    runAppCode();
+}
+
 function fillReportForm() {
     document.getElementById("type").value = "lost";
+
     document.getElementById("item-name").value =
         "Blue Backpack";
+
     document.getElementById("category").value = "bags";
+
     document.getElementById("description").value =
         "Blue school backpack";
+
     document.getElementById("location").value = "Campus";
+
     document.getElementById("date").value = "2026-10-07";
 }
 
@@ -191,6 +227,16 @@ function getItemsGridText() {
     return document.getElementById("items-grid").textContent;
 }
 
+function getDetailsText() {
+    return document.getElementById(
+        "item-details-container"
+    ).textContent;
+}
+
+// ======================================================
+// TEST SETUP
+// ======================================================
+
 beforeEach(() => {
     jest.clearAllMocks();
 
@@ -211,6 +257,10 @@ afterEach(() => {
 
     document.body.innerHTML = "";
 });
+
+// ======================================================
+// REPORT ITEM TESTS
+// ======================================================
 
 describe("CloudLost report form", () => {
 
@@ -241,10 +291,14 @@ describe("CloudLost report form", () => {
     test("changes heading when report type changes", () => {
         loadReportPage();
 
-        const reportType = document.getElementById("type");
-        const reportTitle = document.getElementById("report-title");
+        const reportType =
+            document.getElementById("type");
+
+        const reportTitle =
+            document.getElementById("report-title");
 
         reportType.value = "lost";
+
         reportType.dispatchEvent(
             new Event("change", { bubbles: true })
         );
@@ -253,6 +307,7 @@ describe("CloudLost report form", () => {
             .toBe("Report a Lost Item");
 
         reportType.value = "found";
+
         reportType.dispatchEvent(
             new Event("change", { bubbles: true })
         );
@@ -263,6 +318,7 @@ describe("CloudLost report form", () => {
 
     test("prevents normal form submission", () => {
         loadReportPage("?type=lost");
+
         fillReportForm();
 
         const event = submitReportForm();
@@ -272,6 +328,7 @@ describe("CloudLost report form", () => {
 
     test("sends the report to the CloudLost API", async () => {
         loadReportPage("?type=lost");
+
         fillReportForm();
         submitReportForm();
 
@@ -304,6 +361,10 @@ describe("CloudLost report form", () => {
         });
     });
 });
+
+// ======================================================
+// BROWSE ITEMS TESTS
+// ======================================================
 
 describe("CloudLost browse items", () => {
 
@@ -394,5 +455,88 @@ describe("CloudLost browse items", () => {
 
         expect(getItemsGridText())
             .not.toContain("Blue Water Bottle");
+    });
+});
+
+// ======================================================
+// ITEM DETAILS LINK TEST
+// ======================================================
+
+describe("CloudLost item details link", () => {
+
+    test("opens the details page when an item is clicked", async () => {
+        loadBrowsePage();
+
+        await waitForAsyncUpdates();
+
+        const itemCard =
+            document.querySelector(".item-card");
+
+        expect(itemCard).not.toBeNull();
+
+        const detailsLink =
+            itemCard.querySelector("a");
+
+        expect(detailsLink).not.toBeNull();
+
+        expect(detailsLink.getAttribute("href"))
+            .toBe("item-details.html?id=1");
+    });
+});
+
+// ======================================================
+// ITEM DETAILS PAGE TESTS
+// ======================================================
+
+describe("CloudLost item details page", () => {
+
+    test("loads the selected item using its URL ID", async () => {
+        loadItemDetailsPage("1");
+
+        await waitForAsyncUpdates();
+
+        expect(fetch).toHaveBeenCalledWith(API_URL);
+
+        expect(getDetailsText())
+            .toContain("Black Backpack");
+
+        expect(getDetailsText())
+            .not.toContain("Silver Laptop");
+    });
+
+    test("displays the selected item's complete information", async () => {
+        loadItemDetailsPage("1");
+
+        await waitForAsyncUpdates();
+
+        expect(getDetailsText())
+            .toContain("Black Backpack");
+
+        expect(getDetailsText())
+            .toContain("Black backpack with laptop sleeve");
+
+        expect(getDetailsText())
+            .toContain("Campus");
+
+        expect(getDetailsText())
+            .toContain("2026-10-07");
+
+        expect(getDetailsText())
+            .toContain("LOST");
+
+        expect(getDetailsText())
+            .toContain("OPEN");
+
+        expect(getDetailsText())
+            .toContain("bags");
+    });
+
+    test("shows a message when the item does not exist", async () => {
+        loadItemDetailsPage("999");
+
+        await waitForAsyncUpdates();
+
+        expect(getDetailsText())
+            .toContain("Item not found");
     });
 });

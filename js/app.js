@@ -4,11 +4,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const API_URL =
         "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com/items";
 
-    /*
-     * =========================================================
-     * REPORT ITEM PAGE
-     * =========================================================
-     */
+    // ======================================================
+    // REPORT ITEM PAGE
+    // ======================================================
 
     const reportForm =
         document.getElementById("report-form");
@@ -22,139 +20,82 @@ document.addEventListener("DOMContentLoaded", function () {
     const formMessage =
         document.getElementById("form-message");
 
-    // Only run report functionality on report.html
     if (reportForm && reportType) {
 
-        // Read ?type=lost or ?type=found from the URL
         const params =
             new URLSearchParams(window.location.search);
 
-        const typeFromUrl =
-            params.get("type");
+        const typeFromUrl = params.get("type");
 
         if (typeFromUrl === "lost") {
-
             reportType.value = "lost";
 
             if (reportTitle) {
-                reportTitle.textContent =
-                    "Report a Lost Item";
+                reportTitle.textContent = "Report a Lost Item";
             }
         }
 
         if (typeFromUrl === "found") {
-
             reportType.value = "found";
 
             if (reportTitle) {
-                reportTitle.textContent =
-                    "Report a Found Item";
+                reportTitle.textContent = "Report a Found Item";
             }
         }
 
-        // Update heading when report type changes
         reportType.addEventListener("change", function () {
 
-            if (!reportTitle) {
-                return;
-            }
+            if (!reportTitle) return;
 
             if (reportType.value === "lost") {
-
-                reportTitle.textContent =
-                    "Report a Lost Item";
+                reportTitle.textContent = "Report a Lost Item";
 
             } else if (reportType.value === "found") {
-
-                reportTitle.textContent =
-                    "Report a Found Item";
+                reportTitle.textContent = "Report a Found Item";
 
             } else {
-
-                reportTitle.textContent =
-                    "Report an Item";
+                reportTitle.textContent = "Report an Item";
             }
         });
 
-        // Submit reports to AWS
         reportForm.addEventListener(
             "submit",
             async function (event) {
 
                 event.preventDefault();
 
-                const itemName =
-                    document.getElementById(
-                        "item-name"
-                    ).value;
-
-                const category =
-                    document.getElementById(
-                        "category"
-                    ).value;
-
-                const description =
-                    document.getElementById(
-                        "description"
-                    ).value;
-
-                const location =
-                    document.getElementById(
-                        "location"
-                    ).value;
-
-                const date =
-                    document.getElementById(
-                        "date"
-                    ).value;
-
                 const reportData = {
                     type: reportType.value,
-                    itemName: itemName,
-                    category: category,
-                    description: description,
-                    location: location,
-                    date: date,
+                    itemName: document.getElementById("item-name").value,
+                    category: document.getElementById("category").value,
+                    description: document.getElementById("description").value,
+                    location: document.getElementById("location").value,
+                    date: document.getElementById("date").value,
                     status: "OPEN"
                 };
 
-                console.log(
-                    "CloudLost Report:",
-                    reportData
-                );
+                console.log("CloudLost Report:", reportData);
 
                 if (formMessage) {
-                    formMessage.textContent =
-                        "Submitting report...";
+                    formMessage.textContent = "Submitting report...";
                 }
 
                 try {
-
-                    const response = await fetch(
-                        API_URL,
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-                            body: JSON.stringify(reportData)
-                        }
-                    );
+                    const response = await fetch(API_URL, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(reportData)
+                    });
 
                     if (!response.ok) {
-                        throw new Error(
-                            "Unable to submit report"
-                        );
+                        throw new Error("Unable to submit report");
                     }
 
-                    const result =
-                        await response.json();
+                    const result = await response.json();
 
-                    console.log(
-                        "AWS Response:",
-                        result
-                    );
+                    console.log("AWS Response:", result);
 
                     if (formMessage) {
                         formMessage.textContent =
@@ -162,11 +103,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     }
 
                 } catch (error) {
-
-                    console.error(
-                        "Error submitting report:",
-                        error
-                    );
+                    console.error("Error submitting report:", error);
 
                     if (formMessage) {
                         formMessage.textContent =
@@ -177,12 +114,9 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-
-    /*
-     * =========================================================
-     * BROWSE ITEMS PAGE
-     * =========================================================
-     */
+    // ======================================================
+    // BROWSE ITEMS PAGE
+    // ======================================================
 
     const itemsGrid =
         document.getElementById("items-grid");
@@ -196,94 +130,53 @@ document.addEventListener("DOMContentLoaded", function () {
     const categoryFilter =
         document.getElementById("category-filter");
 
-    // Store items loaded from AWS
     let allItems = [];
 
-    // Only run browse functionality on items.html
     if (itemsGrid) {
 
         if (searchInput) {
-            searchInput.addEventListener(
-                "input",
-                filterItems
-            );
+            searchInput.addEventListener("input", filterItems);
         }
 
         if (typeFilter) {
-            typeFilter.addEventListener(
-                "change",
-                filterItems
-            );
+            typeFilter.addEventListener("change", filterItems);
         }
 
         if (categoryFilter) {
-            categoryFilter.addEventListener(
-                "change",
-                filterItems
-            );
+            categoryFilter.addEventListener("change", filterItems);
         }
 
         loadItems();
     }
 
-
-    /*
-     * LOAD ITEMS FROM AWS
-     */
     async function loadItems() {
 
         try {
-
-            const response =
-                await fetch(API_URL);
+            const response = await fetch(API_URL);
 
             if (!response.ok) {
-                throw new Error(
-                    "Unable to load items"
-                );
+                throw new Error("Unable to load items");
             }
 
-            const result =
-                await response.json();
+            const result = await response.json();
 
             allItems = result.items || [];
 
-            // Apply active search and filters
             filterItems();
 
         } catch (error) {
-
-            console.error(
-                "Error loading items:",
-                error
-            );
+            console.error("Error loading items:", error);
 
             if (itemsGrid) {
-                itemsGrid.innerHTML = `
-                    <div class="empty-items">
-
-                        <div class="empty-icon">
-                            ⚠️
-                        </div>
-
-                        <h2>
-                            Unable to load items
-                        </h2>
-
-                        <p>
-                            Please try again later.
-                        </p>
-
-                    </div>
-                `;
+                showMessage(
+                    itemsGrid,
+                    "Unable to load items",
+                    "Please try again later."
+                );
             }
         }
     }
 
-
-    /*
-     * SEARCH AND FILTER ITEMS
-     */
     function filterItems() {
 
         const searchText = searchInput
@@ -298,83 +191,51 @@ document.addEventListener("DOMContentLoaded", function () {
             ? categoryFilter.value
             : "all";
 
-        const filteredItems = allItems.filter(
-            function (item) {
+        const filteredItems = allItems.filter(function (item) {
 
-                const itemName =
-                    (item.itemName || "").toLowerCase();
+            const itemName =
+                String(item.itemName || "").toLowerCase();
 
-                const itemType =
-                    (item.type || "").toLowerCase();
+            const itemType =
+                String(item.type || "").toLowerCase();
 
-                const itemCategory =
-                    (item.category || "").toLowerCase();
+            const itemCategory =
+                String(item.category || "").toLowerCase();
 
-                const matchesSearch =
-                    itemName.includes(searchText);
+            const matchesSearch =
+                itemName.includes(searchText);
 
-                const matchesType =
-                    selectedType === "all" ||
-                    itemType === selectedType;
+            const matchesType =
+                selectedType === "all" ||
+                itemType === selectedType;
 
-                const matchesCategory =
-                    selectedCategory === "all" ||
-                    itemCategory === selectedCategory;
+            const matchesCategory =
+                selectedCategory === "all" ||
+                itemCategory === selectedCategory;
 
-                return (
-                    matchesSearch &&
-                    matchesType &&
-                    matchesCategory
-                );
-            }
-        );
+            return (
+                matchesSearch &&
+                matchesType &&
+                matchesCategory
+            );
+        });
 
         displayItems(filteredItems);
     }
 
-
-    /*
-     * DISPLAY ITEMS ON THE PAGE
-     */
     function displayItems(items) {
 
-        if (!itemsGrid) {
-            return;
-        }
+        if (!itemsGrid) return;
 
-        // Show empty state
         if (items.length === 0) {
-
-            itemsGrid.innerHTML = `
-                <div class="empty-items">
-
-                    <div class="empty-icon">
-                        🔎
-                    </div>
-
-                    <h2>
-                        No matching items found
-                    </h2>
-
-                    <p>
-                        Try changing your search
-                        or filter selections.
-                    </p>
-
-                    <a
-                        href="report.html"
-                        class="btn btn-browse"
-                    >
-                        Report an Item
-                    </a>
-
-                </div>
-            `;
-
+            showMessage(
+                itemsGrid,
+                "No matching items found",
+                "Try changing your search or filter selections."
+            );
             return;
         }
 
-        // Clear previously displayed items
         itemsGrid.innerHTML = "";
 
         items.forEach(function (item) {
@@ -384,137 +245,268 @@ document.addEventListener("DOMContentLoaded", function () {
 
             itemCard.className = "item-card";
 
-            const type =
-                String(item.type || "unknown");
-
-            const itemName =
-                String(item.itemName || "Unnamed Item");
-
-            const category =
-                String(item.category || "other");
-
-            const description =
-                String(
-                    item.description ||
-                    "No description provided."
-                );
-
-            const location =
-                String(
-                    item.location ||
-                    "Location not provided"
-                );
-
-            const date =
-                String(
-                    item.date ||
-                    "Date not provided"
-                );
-
-            const status =
-                String(item.status || "OPEN");
-
-            // Create the card structure
-            // Use textContent for user-submitted data
-            // to prevent HTML injection.
             const cardHeader =
                 document.createElement("div");
 
-            cardHeader.className =
-                "item-card-header";
+            cardHeader.className = "item-card-header";
 
             const typeBadge =
                 document.createElement("span");
 
-            typeBadge.className =
-                "item-type";
+            typeBadge.className = "item-type";
+
+            const type = String(item.type || "unknown");
 
             if (type.toLowerCase() === "lost") {
                 typeBadge.classList.add("lost");
+
             } else if (type.toLowerCase() === "found") {
                 typeBadge.classList.add("found");
             }
 
-            typeBadge.textContent =
-                type.toUpperCase();
+            typeBadge.textContent = type.toUpperCase();
 
             const statusBadge =
                 document.createElement("span");
 
-            statusBadge.className =
-                "item-status";
+            statusBadge.className = "item-status";
 
-            statusBadge.textContent = status;
+            statusBadge.textContent =
+                String(item.status || "OPEN");
 
             cardHeader.appendChild(typeBadge);
             cardHeader.appendChild(statusBadge);
 
-            const title =
-                document.createElement("h2");
+            const title = document.createElement("h2");
+            title.textContent = item.itemName || "Unnamed Item";
 
-            title.textContent = itemName;
+            const categoryText = document.createElement("p");
+            categoryText.className = "item-category";
+            categoryText.textContent = item.category || "other";
 
-            const categoryText =
-                document.createElement("p");
-
-            categoryText.className =
-                "item-category";
-
-            categoryText.textContent = category;
-
-            const descriptionText =
-                document.createElement("p");
-
-            descriptionText.className =
-                "item-description";
-
+            const descriptionText = document.createElement("p");
+            descriptionText.className = "item-description";
             descriptionText.textContent =
-                description;
+                item.description || "No description provided.";
 
-            const details =
-                document.createElement("div");
+            const details = document.createElement("div");
+            details.className = "item-details";
 
-            details.className =
-                "item-details";
-
-            const locationText =
-                document.createElement("p");
-
-            const locationLabel =
-                document.createElement("strong");
-
-            locationLabel.textContent =
-                "Location: ";
-
-            locationText.appendChild(locationLabel);
-            locationText.appendChild(
-                document.createTextNode(location)
+            details.appendChild(
+                createDetailRow(
+                    "Location:",
+                    item.location || "Location not provided"
+                )
             );
 
-            const dateText =
-                document.createElement("p");
-
-            const dateLabel =
-                document.createElement("strong");
-
-            dateLabel.textContent =
-                "Date: ";
-
-            dateText.appendChild(dateLabel);
-            dateText.appendChild(
-                document.createTextNode(date)
+            details.appendChild(
+                createDetailRow(
+                    "Date:",
+                    item.date || "Date not provided"
+                )
             );
 
-            details.appendChild(locationText);
-            details.appendChild(dateText);
+            const detailsLink = document.createElement("a");
+
+            detailsLink.className =
+                "btn btn-browse item-details-link";
+
+            detailsLink.textContent = "View Details";
+
+            detailsLink.href =
+                "item-details.html?id=" +
+                encodeURIComponent(item.itemId);
 
             itemCard.appendChild(cardHeader);
             itemCard.appendChild(title);
             itemCard.appendChild(categoryText);
             itemCard.appendChild(descriptionText);
             itemCard.appendChild(details);
+            itemCard.appendChild(detailsLink);
 
             itemsGrid.appendChild(itemCard);
         });
+    }
+
+    // ======================================================
+    // ITEM DETAILS PAGE
+    // ======================================================
+
+    const itemDetailsContainer =
+        document.getElementById("item-details-container");
+
+    if (itemDetailsContainer) {
+        loadItemDetails();
+    }
+
+    async function loadItemDetails() {
+
+        const params =
+            new URLSearchParams(window.location.search);
+
+        const itemId = params.get("id");
+
+        if (!itemId) {
+            showMessage(
+                itemDetailsContainer,
+                "Item not found",
+                "No item ID was provided."
+            );
+            return;
+        }
+
+        try {
+            const response = await fetch(API_URL);
+
+            if (!response.ok) {
+                throw new Error("Unable to load item details");
+            }
+
+            const result = await response.json();
+
+            const items = result.items || [];
+
+            const selectedItem = items.find(function (item) {
+                return String(item.itemId) === itemId;
+            });
+
+            if (!selectedItem) {
+                showMessage(
+                    itemDetailsContainer,
+                    "Item not found",
+                    "This item may have been removed or does not exist."
+                );
+                return;
+            }
+
+            displayItemDetails(selectedItem);
+
+        } catch (error) {
+            console.error("Error loading item details:", error);
+
+            showMessage(
+                itemDetailsContainer,
+                "Unable to load item details",
+                "Please try again later."
+            );
+        }
+    }
+
+    function displayItemDetails(item) {
+
+        if (!itemDetailsContainer) return;
+
+        itemDetailsContainer.innerHTML = "";
+
+        const card = document.createElement("article");
+        card.className = "item-card item-details-card";
+
+        const header = document.createElement("div");
+        header.className = "item-card-header";
+
+        const typeBadge = document.createElement("span");
+        typeBadge.className = "item-type";
+
+        const type = String(item.type || "unknown");
+
+        if (type.toLowerCase() === "lost") {
+            typeBadge.classList.add("lost");
+
+        } else if (type.toLowerCase() === "found") {
+            typeBadge.classList.add("found");
+        }
+
+        typeBadge.textContent = type.toUpperCase();
+
+        const statusBadge = document.createElement("span");
+        statusBadge.className = "item-status";
+        statusBadge.textContent = String(item.status || "OPEN");
+
+        header.appendChild(typeBadge);
+        header.appendChild(statusBadge);
+
+        const title = document.createElement("h2");
+        title.textContent = item.itemName || "Unnamed Item";
+
+        const details = document.createElement("div");
+        details.className = "item-details";
+
+        details.appendChild(
+            createDetailRow("Category:", item.category || "other")
+        );
+
+        details.appendChild(
+            createDetailRow(
+                "Location:",
+                item.location || "Location not provided"
+            )
+        );
+
+        details.appendChild(
+            createDetailRow(
+                "Date:",
+                item.date || "Date not provided"
+            )
+        );
+
+        const descriptionHeading =
+            document.createElement("h3");
+
+        descriptionHeading.textContent = "Description";
+
+        const description = document.createElement("p");
+        description.className = "item-description";
+
+        description.textContent =
+            item.description || "No description provided.";
+
+        card.appendChild(header);
+        card.appendChild(title);
+        card.appendChild(details);
+        card.appendChild(descriptionHeading);
+        card.appendChild(description);
+
+        itemDetailsContainer.appendChild(card);
+    }
+
+    // ======================================================
+    // SHARED HELPERS
+    // ======================================================
+
+    function createDetailRow(label, value) {
+
+        const row = document.createElement("p");
+
+        const strong = document.createElement("strong");
+        strong.textContent = label + " ";
+
+        row.appendChild(strong);
+
+        row.appendChild(
+            document.createTextNode(String(value))
+        );
+
+        return row;
+    }
+
+    function showMessage(container, heading, message) {
+
+        if (!container) return;
+
+        container.innerHTML = "";
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "empty-items";
+
+        const title = document.createElement("h2");
+        title.textContent = heading;
+
+        const description = document.createElement("p");
+        description.textContent = message;
+
+        wrapper.appendChild(title);
+        wrapper.appendChild(description);
+
+        container.appendChild(wrapper);
     }
 });
