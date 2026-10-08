@@ -1,3 +1,4 @@
+
 document.addEventListener("DOMContentLoaded", function () {
 
     const API_URL =
@@ -21,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const formMessage =
         document.getElementById("form-message");
 
-    // Only run report-page code if we are on report.html
+    // Only run report functionality on report.html
     if (reportForm && reportType) {
 
         // Read ?type=lost or ?type=found from the URL
@@ -51,36 +52,31 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        // Change heading when report type changes
-        reportType.addEventListener(
-            "change",
-            function () {
+        // Update heading when report type changes
+        reportType.addEventListener("change", function () {
 
-                if (!reportTitle) {
-                    return;
-                }
-
-                if (reportType.value === "lost") {
-
-                    reportTitle.textContent =
-                        "Report a Lost Item";
-
-                } else if (
-                    reportType.value === "found"
-                ) {
-
-                    reportTitle.textContent =
-                        "Report a Found Item";
-
-                } else {
-
-                    reportTitle.textContent =
-                        "Report an Item";
-                }
+            if (!reportTitle) {
+                return;
             }
-        );
 
-        // Send report to AWS
+            if (reportType.value === "lost") {
+
+                reportTitle.textContent =
+                    "Report a Lost Item";
+
+            } else if (reportType.value === "found") {
+
+                reportTitle.textContent =
+                    "Report a Found Item";
+
+            } else {
+
+                reportTitle.textContent =
+                    "Report an Item";
+            }
+        });
+
+        // Submit reports to AWS
         reportForm.addEventListener(
             "submit",
             async function (event) {
@@ -134,20 +130,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 try {
 
-                    const response =
-                        await fetch(
-                            API_URL,
-                            {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type":
-                                        "application/json"
-                                },
-                                body: JSON.stringify(
-                                    reportData
-                                )
-                            }
-                        );
+                    const response = await fetch(
+                        API_URL,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body: JSON.stringify(reportData)
+                        }
+                    );
 
                     if (!response.ok) {
                         throw new Error(
@@ -194,15 +187,48 @@ document.addEventListener("DOMContentLoaded", function () {
     const itemsGrid =
         document.getElementById("items-grid");
 
-    // Only run browse-page code if we are on items.html
+    const searchInput =
+        document.getElementById("search-input");
+
+    const typeFilter =
+        document.getElementById("type-filter");
+
+    const categoryFilter =
+        document.getElementById("category-filter");
+
+    // Store items loaded from AWS
+    let allItems = [];
+
+    // Only run browse functionality on items.html
     if (itemsGrid) {
+
+        if (searchInput) {
+            searchInput.addEventListener(
+                "input",
+                filterItems
+            );
+        }
+
+        if (typeFilter) {
+            typeFilter.addEventListener(
+                "change",
+                filterItems
+            );
+        }
+
+        if (categoryFilter) {
+            categoryFilter.addEventListener(
+                "change",
+                filterItems
+            );
+        }
 
         loadItems();
     }
 
 
     /*
-     * Load items from AWS
+     * LOAD ITEMS FROM AWS
      */
     async function loadItems() {
 
@@ -220,10 +246,10 @@ document.addEventListener("DOMContentLoaded", function () {
             const result =
                 await response.json();
 
-            const items =
-                result.items || [];
+            allItems = result.items || [];
 
-            displayItems(items);
+            // Apply active search and filters
+            filterItems();
 
         } catch (error) {
 
@@ -232,32 +258,91 @@ document.addEventListener("DOMContentLoaded", function () {
                 error
             );
 
-            itemsGrid.innerHTML = `
-                <div class="empty-items">
+            if (itemsGrid) {
+                itemsGrid.innerHTML = `
+                    <div class="empty-items">
 
-                    <div class="empty-icon">
-                        ⚠️
+                        <div class="empty-icon">
+                            ⚠️
+                        </div>
+
+                        <h2>
+                            Unable to load items
+                        </h2>
+
+                        <p>
+                            Please try again later.
+                        </p>
+
                     </div>
-
-                    <h2>
-                        Unable to load items
-                    </h2>
-
-                    <p>
-                        Please try again later.
-                    </p>
-
-                </div>
-            `;
+                `;
+            }
         }
     }
 
 
     /*
-     * Display items on the Browse Items page
+     * SEARCH AND FILTER ITEMS
+     */
+    function filterItems() {
+
+        const searchText = searchInput
+            ? searchInput.value.trim().toLowerCase()
+            : "";
+
+        const selectedType = typeFilter
+            ? typeFilter.value
+            : "all";
+
+        const selectedCategory = categoryFilter
+            ? categoryFilter.value
+            : "all";
+
+        const filteredItems = allItems.filter(
+            function (item) {
+
+                const itemName =
+                    (item.itemName || "").toLowerCase();
+
+                const itemType =
+                    (item.type || "").toLowerCase();
+
+                const itemCategory =
+                    (item.category || "").toLowerCase();
+
+                const matchesSearch =
+                    itemName.includes(searchText);
+
+                const matchesType =
+                    selectedType === "all" ||
+                    itemType === selectedType;
+
+                const matchesCategory =
+                    selectedCategory === "all" ||
+                    itemCategory === selectedCategory;
+
+                return (
+                    matchesSearch &&
+                    matchesType &&
+                    matchesCategory
+                );
+            }
+        );
+
+        displayItems(filteredItems);
+    }
+
+
+    /*
+     * DISPLAY ITEMS ON THE PAGE
      */
     function displayItems(items) {
 
+        if (!itemsGrid) {
+            return;
+        }
+
+        // Show empty state
         if (items.length === 0) {
 
             itemsGrid.innerHTML = `
@@ -268,12 +353,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
 
                     <h2>
-                        No items to display yet
+                        No matching items found
                     </h2>
 
                     <p>
-                        No lost or found items
-                        have been reported yet.
+                        Try changing your search
+                        or filter selections.
                     </p>
 
                     <a
@@ -289,6 +374,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        // Clear previously displayed items
         itemsGrid.innerHTML = "";
 
         items.forEach(function (item) {
@@ -299,74 +385,136 @@ document.addEventListener("DOMContentLoaded", function () {
             itemCard.className = "item-card";
 
             const type =
-                item.type || "unknown";
+                String(item.type || "unknown");
 
             const itemName =
-                item.itemName || "Unnamed Item";
+                String(item.itemName || "Unnamed Item");
 
             const category =
-                item.category || "other";
+                String(item.category || "other");
 
             const description =
-                item.description ||
-                "No description provided.";
+                String(
+                    item.description ||
+                    "No description provided."
+                );
 
             const location =
-                item.location ||
-                "Location not provided";
+                String(
+                    item.location ||
+                    "Location not provided"
+                );
 
             const date =
-                item.date ||
-                "Date not provided";
+                String(
+                    item.date ||
+                    "Date not provided"
+                );
 
             const status =
-                item.status || "OPEN";
+                String(item.status || "OPEN");
 
-            itemCard.innerHTML = `
-                <div class="item-card-header">
+            // Create the card structure
+            // Use textContent for user-submitted data
+            // to prevent HTML injection.
+            const cardHeader =
+                document.createElement("div");
 
-                    <span
-                        class="item-type ${type}"
-                    >
-                        ${type.toUpperCase()}
-                    </span>
+            cardHeader.className =
+                "item-card-header";
 
-                    <span class="item-status">
-                        ${status}
-                    </span>
+            const typeBadge =
+                document.createElement("span");
 
-                </div>
+            typeBadge.className =
+                "item-type";
 
-                <h2>
-                    ${itemName}
-                </h2>
+            if (type.toLowerCase() === "lost") {
+                typeBadge.classList.add("lost");
+            } else if (type.toLowerCase() === "found") {
+                typeBadge.classList.add("found");
+            }
 
-                <p class="item-category">
-                    ${category}
-                </p>
+            typeBadge.textContent =
+                type.toUpperCase();
 
-                <p class="item-description">
-                    ${description}
-                </p>
+            const statusBadge =
+                document.createElement("span");
 
-                <div class="item-details">
+            statusBadge.className =
+                "item-status";
 
-                    <p>
-                        <strong>Location:</strong>
-                        ${location}
-                    </p>
+            statusBadge.textContent = status;
 
-                    <p>
-                        <strong>Date:</strong>
-                        ${date}
-                    </p>
+            cardHeader.appendChild(typeBadge);
+            cardHeader.appendChild(statusBadge);
 
-                </div>
-            `;
+            const title =
+                document.createElement("h2");
 
-            itemsGrid.appendChild(
-                itemCard
+            title.textContent = itemName;
+
+            const categoryText =
+                document.createElement("p");
+
+            categoryText.className =
+                "item-category";
+
+            categoryText.textContent = category;
+
+            const descriptionText =
+                document.createElement("p");
+
+            descriptionText.className =
+                "item-description";
+
+            descriptionText.textContent =
+                description;
+
+            const details =
+                document.createElement("div");
+
+            details.className =
+                "item-details";
+
+            const locationText =
+                document.createElement("p");
+
+            const locationLabel =
+                document.createElement("strong");
+
+            locationLabel.textContent =
+                "Location: ";
+
+            locationText.appendChild(locationLabel);
+            locationText.appendChild(
+                document.createTextNode(location)
             );
+
+            const dateText =
+                document.createElement("p");
+
+            const dateLabel =
+                document.createElement("strong");
+
+            dateLabel.textContent =
+                "Date: ";
+
+            dateText.appendChild(dateLabel);
+            dateText.appendChild(
+                document.createTextNode(date)
+            );
+
+            details.appendChild(locationText);
+            details.appendChild(dateText);
+
+            itemCard.appendChild(cardHeader);
+            itemCard.appendChild(title);
+            itemCard.appendChild(categoryText);
+            itemCard.appendChild(descriptionText);
+            itemCard.appendChild(details);
+
+            itemsGrid.appendChild(itemCard);
         });
     }
 });

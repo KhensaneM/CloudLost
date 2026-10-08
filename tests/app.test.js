@@ -1,3 +1,4 @@
+
 /**
  * @jest-environment jsdom
  */
@@ -11,80 +12,38 @@ const API_URL =
     "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com/items";
 
 const reportPageHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>CloudLost Test</title>
-</head>
-
-<body>
-
     <h1 id="report-title">Report an Item</h1>
 
     <form id="report-form">
-
-        <select id="type" name="type">
+        <select id="type">
             <option value="">Select report type</option>
             <option value="lost">Lost Item</option>
             <option value="found">Found Item</option>
         </select>
 
-        <input
-            type="text"
-            id="item-name"
-            name="itemName"
-        >
+        <input id="item-name" type="text">
 
-        <select id="category" name="category">
+        <select id="category">
             <option value="">Select category</option>
             <option value="bags">Bags</option>
             <option value="electronics">Electronics</option>
             <option value="other">Other</option>
         </select>
 
-        <textarea
-            id="description"
-            name="description"
-        ></textarea>
+        <textarea id="description"></textarea>
+        <input id="location" type="text">
+        <input id="date" type="date">
 
-        <input
-            type="text"
-            id="location"
-            name="location"
-        >
-
-        <input
-            type="date"
-            id="date"
-            name="date"
-        >
-
-        <button type="submit">
-            Submit Report
-        </button>
-
+        <button type="submit">Submit Report</button>
     </form>
 
     <div id="form-message"></div>
-
-</body>
-</html>
 `;
 
 const browsePageHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Browse Items | CloudLost</title>
-</head>
-
-<body>
-
     <input
-        type="text"
         id="search-input"
+        type="text"
         placeholder="Search for an item..."
     >
 
@@ -105,33 +64,59 @@ const browsePageHtml = `
         <option value="other">Other</option>
     </select>
 
-    <section
-        class="items-grid"
-        id="items-grid"
-    ></section>
-
-</body>
-</html>
+    <section id="items-grid"></section>
 `;
 
+const mockItems = [
+    {
+        itemId: "1",
+        type: "lost",
+        itemName: "Black Backpack",
+        category: "bags",
+        description: "Black backpack with laptop sleeve",
+        location: "Campus",
+        date: "2026-10-07",
+        status: "OPEN"
+    },
+    {
+        itemId: "2",
+        type: "found",
+        itemName: "Blue Water Bottle",
+        category: "other",
+        description: "Blue bottle with black lid",
+        location: "Library",
+        date: "2026-10-07",
+        status: "OPEN"
+    },
+    {
+        itemId: "3",
+        type: "lost",
+        itemName: "Silver Laptop",
+        category: "electronics",
+        description: "Silver laptop in black case",
+        location: "Classroom",
+        date: "2026-10-07",
+        status: "OPEN"
+    }
+];
+
 function runAppCode() {
-    const appCode =
-        fs.readFileSync(APP_JS_PATH, "utf8");
+    const appCode = fs.readFileSync(APP_JS_PATH, "utf8");
 
     let domReadyCallback = null;
 
     const originalAddEventListener =
-        document.addEventListener.bind(document);
+        document.addEventListener;
 
     document.addEventListener = jest.fn(
         (eventName, callback, options) => {
-
             if (eventName === "DOMContentLoaded") {
                 domReadyCallback = callback;
                 return;
             }
 
-            originalAddEventListener(
+            return originalAddEventListener.call(
+                document,
                 eventName,
                 callback,
                 options
@@ -139,10 +124,11 @@ function runAppCode() {
         }
     );
 
-    eval(appCode);
-
-    document.addEventListener =
-        originalAddEventListener;
+    try {
+        eval(appCode);
+    } finally {
+        document.addEventListener = originalAddEventListener;
+    }
 
     if (domReadyCallback) {
         domReadyCallback();
@@ -150,8 +136,7 @@ function runAppCode() {
 }
 
 function loadReportPage(search = "") {
-    document.body.innerHTML =
-        reportPageHtml;
+    document.body.innerHTML = reportPageHtml;
 
     window.history.replaceState(
         {},
@@ -163,8 +148,7 @@ function loadReportPage(search = "") {
 }
 
 function loadBrowsePage() {
-    document.body.innerHTML =
-        browsePageHtml;
+    document.body.innerHTML = browsePageHtml;
 
     window.history.replaceState(
         {},
@@ -176,32 +160,22 @@ function loadBrowsePage() {
 }
 
 function fillReportForm() {
-    document.getElementById("type").value =
-        "lost";
-
+    document.getElementById("type").value = "lost";
     document.getElementById("item-name").value =
         "Blue Backpack";
-
-    document.getElementById("category").value =
-        "bags";
-
+    document.getElementById("category").value = "bags";
     document.getElementById("description").value =
         "Blue school backpack";
-
-    document.getElementById("location").value =
-        "Campus";
-
-    document.getElementById("date").value =
-        "2026-10-07";
+    document.getElementById("location").value = "Campus";
+    document.getElementById("date").value = "2026-10-07";
 }
 
 function submitReportForm() {
-    const form =
-        document.getElementById("report-form");
+    const form = document.getElementById("report-form");
 
     const event = new Event("submit", {
         bubbles: true,
-        cancelable: true,
+        cancelable: true
     });
 
     form.dispatchEvent(event);
@@ -209,243 +183,216 @@ function submitReportForm() {
     return event;
 }
 
+async function waitForAsyncUpdates() {
+    await new Promise(resolve => setTimeout(resolve, 0));
+}
+
+function getItemsGridText() {
+    return document.getElementById("items-grid").textContent;
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+
+    global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+            message: "Item reported successfully",
+            items: mockItems
+        })
+    });
+
+    window.fetch = global.fetch;
+});
+
+afterEach(() => {
+    delete global.fetch;
+    delete window.fetch;
+
+    document.body.innerHTML = "";
+});
 
 describe("CloudLost report form", () => {
 
-    beforeEach(() => {
-        jest.clearAllMocks();
+    test("selects Lost Item when type=lost is in the URL", () => {
+        loadReportPage("?type=lost");
 
-        global.fetch = jest.fn().mockResolvedValue({
-            ok: true,
+        expect(
+            document.getElementById("type").value
+        ).toBe("lost");
 
-            json: jest.fn().mockResolvedValue({
-                message:
-                    "Item reported successfully",
-            }),
+        expect(
+            document.getElementById("report-title").textContent
+        ).toBe("Report a Lost Item");
+    });
+
+    test("selects Found Item when type=found is in the URL", () => {
+        loadReportPage("?type=found");
+
+        expect(
+            document.getElementById("type").value
+        ).toBe("found");
+
+        expect(
+            document.getElementById("report-title").textContent
+        ).toBe("Report a Found Item");
+    });
+
+    test("changes heading when report type changes", () => {
+        loadReportPage();
+
+        const reportType = document.getElementById("type");
+        const reportTitle = document.getElementById("report-title");
+
+        reportType.value = "lost";
+        reportType.dispatchEvent(
+            new Event("change", { bubbles: true })
+        );
+
+        expect(reportTitle.textContent)
+            .toBe("Report a Lost Item");
+
+        reportType.value = "found";
+        reportType.dispatchEvent(
+            new Event("change", { bubbles: true })
+        );
+
+        expect(reportTitle.textContent)
+            .toBe("Report a Found Item");
+    });
+
+    test("prevents normal form submission", () => {
+        loadReportPage("?type=lost");
+        fillReportForm();
+
+        const event = submitReportForm();
+
+        expect(event.defaultPrevented).toBe(true);
+    });
+
+    test("sends the report to the CloudLost API", async () => {
+        loadReportPage("?type=lost");
+        fillReportForm();
+        submitReportForm();
+
+        await waitForAsyncUpdates();
+
+        expect(fetch).toHaveBeenCalledTimes(1);
+
+        expect(fetch).toHaveBeenCalledWith(
+            API_URL,
+            expect.objectContaining({
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+        );
+
+        const requestBody = JSON.parse(
+            fetch.mock.calls[0][1].body
+        );
+
+        expect(requestBody).toEqual({
+            type: "lost",
+            itemName: "Blue Backpack",
+            category: "bags",
+            description: "Blue school backpack",
+            location: "Campus",
+            date: "2026-10-07",
+            status: "OPEN"
         });
-
-        window.fetch = global.fetch;
     });
-
-    afterEach(() => {
-        delete global.fetch;
-        delete window.fetch;
-
-        document.body.innerHTML = "";
-    });
-
-
-    test(
-        "selects Lost Item when type=lost is in the URL",
-        () => {
-
-            loadReportPage("?type=lost");
-
-            expect(
-                document.getElementById("type").value
-            ).toBe("lost");
-
-            expect(
-                document.getElementById(
-                    "report-title"
-                ).textContent
-            ).toBe("Report a Lost Item");
-        }
-    );
-
-
-    test(
-        "selects Found Item when type=found is in the URL",
-        () => {
-
-            loadReportPage("?type=found");
-
-            expect(
-                document.getElementById("type").value
-            ).toBe("found");
-
-            expect(
-                document.getElementById(
-                    "report-title"
-                ).textContent
-            ).toBe("Report a Found Item");
-        }
-    );
-
-
-    test(
-        "changes heading when report type changes",
-        () => {
-
-            loadReportPage();
-
-            const reportType =
-                document.getElementById("type");
-
-            const reportTitle =
-                document.getElementById(
-                    "report-title"
-                );
-
-            reportType.value = "lost";
-
-            reportType.dispatchEvent(
-                new Event("change", {
-                    bubbles: true,
-                })
-            );
-
-            expect(
-                reportTitle.textContent
-            ).toBe("Report a Lost Item");
-
-            reportType.value = "found";
-
-            reportType.dispatchEvent(
-                new Event("change", {
-                    bubbles: true,
-                })
-            );
-
-            expect(
-                reportTitle.textContent
-            ).toBe("Report a Found Item");
-        }
-    );
-
-
-    test(
-        "prevents normal form submission",
-        () => {
-
-            loadReportPage("?type=lost");
-
-            fillReportForm();
-
-            const event =
-                submitReportForm();
-
-            expect(
-                event.defaultPrevented
-            ).toBe(true);
-        }
-    );
-
-
-    test(
-        "sends the report to the CloudLost API",
-        async () => {
-
-            loadReportPage("?type=lost");
-
-            fillReportForm();
-
-            submitReportForm();
-
-            await new Promise(
-                (resolve) =>
-                    setTimeout(resolve, 0)
-            );
-
-            expect(fetch)
-                .toHaveBeenCalledTimes(1);
-
-            expect(fetch)
-                .toHaveBeenCalledWith(
-                    API_URL,
-                    expect.objectContaining({
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json",
-                        },
-                    })
-                );
-
-            const fetchOptions =
-                fetch.mock.calls[0][1];
-
-            const requestBody =
-                JSON.parse(
-                    fetchOptions.body
-                );
-
-            expect(requestBody).toEqual({
-                type: "lost",
-                itemName: "Blue Backpack",
-                category: "bags",
-                description:
-                    "Blue school backpack",
-                location: "Campus",
-                date: "2026-10-07",
-                status: "OPEN",
-            });
-        }
-    );
 });
-
 
 describe("CloudLost browse items", () => {
 
-    beforeEach(() => {
-        jest.clearAllMocks();
+    test("displays items returned by the CloudLost API", async () => {
+        loadBrowsePage();
 
-        global.fetch = jest.fn().mockResolvedValue({
-            ok: true,
+        await waitForAsyncUpdates();
 
-            json: jest.fn().mockResolvedValue({
-                items: [
-                    {
-                        itemId: "123",
-                        type: "lost",
-                        itemName:
-                            "Black Backpack",
-                        category: "bags",
-                        description:
-                            "Black backpack with laptop sleeve",
-                        location: "Campus",
-                        date: "2026-10-07",
-                        status: "OPEN",
-                    },
-                ],
-            }),
-        });
+        expect(fetch).toHaveBeenCalledWith(API_URL);
 
-        window.fetch = global.fetch;
+        expect(getItemsGridText())
+            .toContain("Black Backpack");
+
+        expect(getItemsGridText())
+            .toContain("Blue Water Bottle");
+
+        expect(getItemsGridText())
+            .toContain("Silver Laptop");
     });
 
+    test("searches items by name", async () => {
+        loadBrowsePage();
 
-    afterEach(() => {
-        delete global.fetch;
-        delete window.fetch;
+        await waitForAsyncUpdates();
 
-        document.body.innerHTML = "";
+        const searchInput =
+            document.getElementById("search-input");
+
+        searchInput.value = "black";
+
+        searchInput.dispatchEvent(
+            new Event("input", { bubbles: true })
+        );
+
+        expect(getItemsGridText())
+            .toContain("Black Backpack");
+
+        expect(getItemsGridText())
+            .not.toContain("Blue Water Bottle");
+
+        expect(getItemsGridText())
+            .not.toContain("Silver Laptop");
     });
 
+    test("filters items by report type", async () => {
+        loadBrowsePage();
 
-    test(
-        "displays items returned by the CloudLost API",
-        async () => {
+        await waitForAsyncUpdates();
 
-            loadBrowsePage();
+        const typeFilter =
+            document.getElementById("type-filter");
 
-            await new Promise(
-                (resolve) =>
-                    setTimeout(resolve, 0)
-            );
+        typeFilter.value = "found";
 
-            expect(fetch)
-                .toHaveBeenCalledWith(API_URL);
+        typeFilter.dispatchEvent(
+            new Event("change", { bubbles: true })
+        );
 
-            const itemsGrid =
-                document.getElementById(
-                    "items-grid"
-                );
+        expect(getItemsGridText())
+            .toContain("Blue Water Bottle");
 
-            expect(
-                itemsGrid.textContent
-            ).toContain("Black Backpack");
-        }
-    );
+        expect(getItemsGridText())
+            .not.toContain("Black Backpack");
+
+        expect(getItemsGridText())
+            .not.toContain("Silver Laptop");
+    });
+
+    test("filters items by category", async () => {
+        loadBrowsePage();
+
+        await waitForAsyncUpdates();
+
+        const categoryFilter =
+            document.getElementById("category-filter");
+
+        categoryFilter.value = "electronics";
+
+        categoryFilter.dispatchEvent(
+            new Event("change", { bubbles: true })
+        );
+
+        expect(getItemsGridText())
+            .toContain("Silver Laptop");
+
+        expect(getItemsGridText())
+            .not.toContain("Black Backpack");
+
+        expect(getItemsGridText())
+            .not.toContain("Blue Water Bottle");
+    });
 });
