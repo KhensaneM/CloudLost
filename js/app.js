@@ -1,30 +1,37 @@
 
 document.addEventListener("DOMContentLoaded", function () {
+    const API_BASE =
+        "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com";
 
-    const API_URL =
-        "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com/items";
+    const API_URL = `${API_BASE}/items`;
+    const UPLOAD_URL = `${API_BASE}/upload-url`;
+
+    const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+    const ALLOWED_IMAGE_TYPES = [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    ];
 
     // ======================================================
     // REPORT ITEM PAGE
     // ======================================================
 
-    const reportForm =
-        document.getElementById("report-form");
+    const reportForm = document.getElementById("report-form");
+    const reportType = document.getElementById("type");
+    const reportTitle = document.getElementById("report-title");
+    const formMessage = document.getElementById("form-message");
+    const imageInput = document.getElementById("image");
 
-    const reportType =
-        document.getElementById("type");
-
-    const reportTitle =
-        document.getElementById("report-title");
-
-    const formMessage =
-        document.getElementById("form-message");
+    function setFormMessage(message) {
+        if (formMessage) {
+            formMessage.textContent = message;
+        }
+    }
 
     if (reportForm && reportType) {
-
-        const params =
-            new URLSearchParams(window.location.search);
-
+        const params = new URLSearchParams(window.location.search);
         const typeFromUrl = params.get("type");
 
         if (typeFromUrl === "lost") {
@@ -44,96 +51,209 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         reportType.addEventListener("change", function () {
-
             if (!reportTitle) return;
 
             if (reportType.value === "lost") {
                 reportTitle.textContent = "Report a Lost Item";
-
             } else if (reportType.value === "found") {
                 reportTitle.textContent = "Report a Found Item";
-
             } else {
                 reportTitle.textContent = "Report an Item";
             }
         });
 
-        reportForm.addEventListener(
-            "submit",
-            async function (event) {
+        reportForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
 
-                event.preventDefault();
+            const token =
+                typeof getAccessToken === "function"
+                    ? getAccessToken()
+                    : null;
 
-                const reportData = {
-                    type: reportType.value,
-                    itemName: document.getElementById("item-name").value,
-                    category: document.getElementById("category").value,
-                    description: document.getElementById("description").value,
-                    location: document.getElementById("location").value,
-                    date: document.getElementById("date").value,
-                    status: "OPEN"
-                };
+            if (!token) {
+                setFormMessage(
+                    "Please log in before submitting a report."
+                );
+                return;
+            }
 
-                console.log("CloudLost Report:", reportData);
+            const reportData = {
+                type: reportType.value,
+                itemName: document.getElementById("item-name").value,
+                category: document.getElementById("category").value,
+                description: document.getElementById("description").value,
+                location: document.getElementById("location").value,
+                date: document.getElementById("date").value,
+                status: "OPEN"
+            };
 
-                if (formMessage) {
-                    formMessage.textContent = "Submitting report...";
+            const imageFile =
+                imageInput && imageInput.files
+                    ? imageInput.files[0]
+                    : null;
+
+            if (imageFile) {
+                if (!ALLOWED_IMAGE_TYPES.includes(imageFile.type)) {
+                    setFormMessage(
+                        "Please select a JPEG, PNG, or WebP image."
+                    );
+                    return;
                 }
 
-                try {
-                    const response = await fetch(API_URL, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(reportData)
-                    });
+                if (imageFile.size > MAX_IMAGE_SIZE) {
+                    setFormMessage(
+                        "Image must be smaller than 5 MB."
+                    );
+                    return;
+                }
 
-                    if (!response.ok) {
-                        throw new Error("Unable to submit report");
-                    }
-
-                    const result = await response.json();
-
-                    console.log("AWS Response:", result);
-
-                    if (formMessage) {
-                        formMessage.textContent =
-                            "Item reported successfully!";
-                    }
-
-                } catch (error) {
-                    console.error("Error submitting report:", error);
-
-                    if (formMessage) {
-                        formMessage.textContent =
-                            "Unable to submit report. Please try again.";
-                    }
+                if (imageFile.size === 0) {
+                    setFormMessage(
+                        "The selected image is empty."
+                    );
+                    return;
                 }
             }
-        );
+
+            console.log("CloudLost Report:", reportData);
+
+            const submitButton =
+                reportForm.querySelector('button[type="submit"]');
+
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            setFormMessage("Submitting report...");
+
+            try {
+                if (imageFile) {
+                    setFormMessage("Uploading image...");
+
+                    const imageKey = await uploadImage(
+                        imageFile,
+                        token
+                    );
+
+                    reportData.imageKey = imageKey;
+                }
+
+                setFormMessage("Submitting report...");
+
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(reportData)
+                });
+
+                if (response.status === 401 ||
+                    response.status === 403) {
+                    setFormMessage(
+                        "Your session is not authorized. Please log in again."
+                    );
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error("Unable to submit report");
+                }
+
+                const result = await response.json();
+
+                console.log("AWS Response:", result);
+
+                setFormMessage("Item reported successfully!");
+
+            } catch (error) {
+                console.error("Error submitting report:", error);
+
+                if (error.message === "UPLOAD_UNAUTHORIZED") {
+                    setFormMessage(
+                        "Image upload was not authorized. Please log in again."
+                    );
+                } else if (error.message === "UPLOAD_URL_FAILED") {
+                    setFormMessage(
+                        "Unable to prepare image upload. Please try again."
+                    );
+                } else if (error.message === "IMAGE_UPLOAD_FAILED") {
+                    setFormMessage(
+                        "Image upload failed. Please try again."
+                    );
+                } else {
+                    setFormMessage(
+                        "Unable to submit report. Please try again."
+                    );
+                }
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                }
+            }
+        });
+    }
+
+    // ======================================================
+    // AWS S3 IMAGE UPLOAD
+    // ======================================================
+
+    async function uploadImage(file, token) {
+        const urlResponse = await fetch(UPLOAD_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                contentType: file.type,
+                fileSize: file.size
+            })
+        });
+
+        if (urlResponse.status === 401 ||
+            urlResponse.status === 403) {
+            throw new Error("UPLOAD_UNAUTHORIZED");
+        }
+
+        if (!urlResponse.ok) {
+            throw new Error("UPLOAD_URL_FAILED");
+        }
+
+        const uploadData = await urlResponse.json();
+
+        if (!uploadData.uploadUrl || !uploadData.imageKey) {
+            throw new Error("UPLOAD_URL_FAILED");
+        }
+
+        const s3Response = await fetch(uploadData.uploadUrl, {
+            method: "PUT",
+            headers: {
+                "Content-Type": file.type
+            },
+            body: file
+        });
+
+        if (!s3Response.ok) {
+            throw new Error("IMAGE_UPLOAD_FAILED");
+        }
+
+        return uploadData.imageKey;
     }
 
     // ======================================================
     // BROWSE ITEMS PAGE
     // ======================================================
 
-    const itemsGrid =
-        document.getElementById("items-grid");
-
-    const searchInput =
-        document.getElementById("search-input");
-
-    const typeFilter =
-        document.getElementById("type-filter");
-
-    const categoryFilter =
-        document.getElementById("category-filter");
+    const itemsGrid = document.getElementById("items-grid");
+    const searchInput = document.getElementById("search-input");
+    const typeFilter = document.getElementById("type-filter");
+    const categoryFilter = document.getElementById("category-filter");
 
     let allItems = [];
 
     if (itemsGrid) {
-
         if (searchInput) {
             searchInput.addEventListener("input", filterItems);
         }
@@ -150,7 +270,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function loadItems() {
-
         try {
             const response = await fetch(API_URL);
 
@@ -178,7 +297,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function filterItems() {
-
         const searchText = searchInput
             ? searchInput.value.trim().toLowerCase()
             : "";
@@ -192,7 +310,6 @@ document.addEventListener("DOMContentLoaded", function () {
             : "all";
 
         const filteredItems = allItems.filter(function (item) {
-
             const itemName =
                 String(item.itemName || "").toLowerCase();
 
@@ -202,8 +319,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const itemCategory =
                 String(item.category || "").toLowerCase();
 
-            const matchesSearch =
-                itemName.includes(searchText);
+            const matchesSearch = itemName.includes(searchText);
 
             const matchesType =
                 selectedType === "all" ||
@@ -224,7 +340,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function displayItems(items) {
-
         if (!itemsGrid) return;
 
         if (items.length === 0) {
@@ -239,38 +354,27 @@ document.addEventListener("DOMContentLoaded", function () {
         itemsGrid.innerHTML = "";
 
         items.forEach(function (item) {
-
-            const itemCard =
-                document.createElement("article");
-
+            const itemCard = document.createElement("article");
             itemCard.className = "item-card";
 
-            const cardHeader =
-                document.createElement("div");
-
+            const cardHeader = document.createElement("div");
             cardHeader.className = "item-card-header";
 
-            const typeBadge =
-                document.createElement("span");
-
+            const typeBadge = document.createElement("span");
             typeBadge.className = "item-type";
 
             const type = String(item.type || "unknown");
 
             if (type.toLowerCase() === "lost") {
                 typeBadge.classList.add("lost");
-
             } else if (type.toLowerCase() === "found") {
                 typeBadge.classList.add("found");
             }
 
             typeBadge.textContent = type.toUpperCase();
 
-            const statusBadge =
-                document.createElement("span");
-
+            const statusBadge = document.createElement("span");
             statusBadge.className = "item-status";
-
             statusBadge.textContent =
                 String(item.status || "OPEN");
 
@@ -307,7 +411,6 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
             const detailsLink = document.createElement("a");
-
             detailsLink.className =
                 "btn btn-browse item-details-link";
 
@@ -340,7 +443,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function loadItemDetails() {
-
         const params =
             new URLSearchParams(window.location.search);
 
@@ -363,7 +465,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             const result = await response.json();
-
             const items = result.items || [];
 
             const selectedItem = items.find(function (item) {
@@ -393,7 +494,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function displayItemDetails(item) {
-
         if (!itemDetailsContainer) return;
 
         itemDetailsContainer.innerHTML = "";
@@ -411,7 +511,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (type.toLowerCase() === "lost") {
             typeBadge.classList.add("lost");
-
         } else if (type.toLowerCase() === "found") {
             typeBadge.classList.add("found");
         }
@@ -449,14 +548,11 @@ document.addEventListener("DOMContentLoaded", function () {
             )
         );
 
-        const descriptionHeading =
-            document.createElement("h3");
-
+        const descriptionHeading = document.createElement("h3");
         descriptionHeading.textContent = "Description";
 
         const description = document.createElement("p");
         description.className = "item-description";
-
         description.textContent =
             item.description || "No description provided.";
 
@@ -474,14 +570,12 @@ document.addEventListener("DOMContentLoaded", function () {
     // ======================================================
 
     function createDetailRow(label, value) {
-
         const row = document.createElement("p");
 
         const strong = document.createElement("strong");
         strong.textContent = label + " ";
 
         row.appendChild(strong);
-
         row.appendChild(
             document.createTextNode(String(value))
         );
@@ -490,7 +584,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function showMessage(container, heading, message) {
-
         if (!container) return;
 
         container.innerHTML = "";

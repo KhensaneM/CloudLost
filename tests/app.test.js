@@ -11,6 +11,8 @@ const APP_JS_PATH = path.join(__dirname, "../js/app.js");
 const API_URL =
     "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com/items";
 
+const TEST_TOKEN = "test-access-token";
+
 // ======================================================
 // TEST HTML
 // ======================================================
@@ -242,6 +244,7 @@ beforeEach(() => {
 
     global.fetch = jest.fn().mockResolvedValue({
         ok: true,
+        status: 200,
         json: jest.fn().mockResolvedValue({
             message: "Item reported successfully",
             items: mockItems
@@ -249,11 +252,18 @@ beforeEach(() => {
     });
 
     window.fetch = global.fetch;
+
+    // Simulate an authenticated Cognito user.
+    global.getAccessToken = jest.fn(() => TEST_TOKEN);
+    window.getAccessToken = global.getAccessToken;
 });
 
 afterEach(() => {
     delete global.fetch;
     delete window.fetch;
+
+    delete global.getAccessToken;
+    delete window.getAccessToken;
 
     document.body.innerHTML = "";
 });
@@ -336,12 +346,15 @@ describe("CloudLost report form", () => {
 
         expect(fetch).toHaveBeenCalledTimes(1);
 
+        expect(getAccessToken).toHaveBeenCalledTimes(1);
+
         expect(fetch).toHaveBeenCalledWith(
             API_URL,
             expect.objectContaining({
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${TEST_TOKEN}`
                 }
             })
         );
@@ -359,6 +372,50 @@ describe("CloudLost report form", () => {
             date: "2026-10-07",
             status: "OPEN"
         });
+
+        expect(
+            document.getElementById("form-message").textContent
+        ).toBe("Item reported successfully!");
+    });
+
+    test("prevents users from reporting items without login", async () => {
+        // Simulate a logged-out user.
+        global.getAccessToken.mockReturnValue(null);
+
+        loadReportPage("?type=lost");
+
+        fillReportForm();
+        submitReportForm();
+
+        await waitForAsyncUpdates();
+
+        expect(fetch).not.toHaveBeenCalled();
+
+        expect(
+            document.getElementById("form-message").textContent
+        ).toBe("Please log in before submitting a report.");
+    });
+
+    test("shows an authorization message for HTTP 401", async () => {
+        global.fetch.mockResolvedValueOnce({
+            ok: false,
+            status: 401
+        });
+
+        loadReportPage("?type=lost");
+
+        fillReportForm();
+        submitReportForm();
+
+        await waitForAsyncUpdates();
+
+        expect(fetch).toHaveBeenCalledTimes(1);
+
+        expect(
+            document.getElementById("form-message").textContent
+        ).toBe(
+            "Your session is not authorized. Please log in again."
+        );
     });
 });
 
