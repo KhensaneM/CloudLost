@@ -1,10 +1,12 @@
 
 document.addEventListener("DOMContentLoaded", function () {
+
     const API_BASE =
         "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com";
 
     const API_URL = `${API_BASE}/items`;
     const UPLOAD_URL = `${API_BASE}/upload-url`;
+    const IMAGE_URL_ENDPOINT = `${API_BASE}/image-url`;
 
     const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -149,8 +151,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     body: JSON.stringify(reportData)
                 });
 
-                if (response.status === 401 ||
-                    response.status === 403) {
+                if (
+                    response.status === 401 ||
+                    response.status === 403
+                ) {
                     setFormMessage(
                         "Your session is not authorized. Please log in again."
                     );
@@ -212,8 +216,10 @@ document.addEventListener("DOMContentLoaded", function () {
             })
         });
 
-        if (urlResponse.status === 401 ||
-            urlResponse.status === 403) {
+        if (
+            urlResponse.status === 401 ||
+            urlResponse.status === 403
+        ) {
             throw new Error("UPLOAD_UNAUTHORIZED");
         }
 
@@ -421,6 +427,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 encodeURIComponent(item.itemId);
 
             itemCard.appendChild(cardHeader);
+
+            // Display an image for reports with an image key.
+            if (item.imageKey) {
+                itemCard.appendChild(createItemImage(item));
+            }
+
             itemCard.appendChild(title);
             itemCard.appendChild(categoryText);
             itemCard.appendChild(descriptionText);
@@ -557,12 +569,114 @@ document.addEventListener("DOMContentLoaded", function () {
             item.description || "No description provided.";
 
         card.appendChild(header);
+
+        // Display a photo on the item details page.
+        if (item.imageKey) {
+            card.appendChild(createItemImage(item));
+        }
+
         card.appendChild(title);
         card.appendChild(details);
         card.appendChild(descriptionHeading);
         card.appendChild(description);
 
         itemDetailsContainer.appendChild(card);
+    }
+
+    // ======================================================
+    // AWS S3 PUBLIC PHOTO DISPLAY - FIXED
+    // ======================================================
+
+    function createItemImage(item) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "item-photo-container";
+
+        const image = document.createElement("img");
+        image.className = "item-photo";
+        image.alt = `Photo of ${item.itemName || "reported item"}`;
+
+        // Important:
+        // A lazy image hidden with display:none may not load.
+        // Use eager loading to prevent this problem.
+        image.loading = "eager";
+        image.decoding = "async";
+
+        image.style.width = "100%";
+        image.style.maxHeight = "320px";
+        image.style.objectFit = "cover";
+        image.style.borderRadius = "10px";
+        image.style.margin = "12px 0";
+        image.style.display = "none";
+
+        const fallback = document.createElement("p");
+        fallback.className = "item-photo-fallback";
+        fallback.textContent = "Loading photo...";
+
+        wrapper.appendChild(image);
+        wrapper.appendChild(fallback);
+
+        function showImage() {
+            image.style.display = "block";
+            fallback.style.display = "none";
+        }
+
+        function showImageError(error) {
+            image.style.display = "none";
+            fallback.style.display = "block";
+            fallback.textContent = "Photo unavailable";
+
+            console.error(
+                "CloudLost image error:",
+                item.itemName,
+                error
+            );
+        }
+
+        image.onload = function () {
+            showImage();
+        };
+
+        image.onerror = function () {
+            showImageError(
+                new Error("Browser could not load S3 image")
+            );
+        };
+
+        const requestUrl =
+            `${IMAGE_URL_ENDPOINT}?imageKey=${encodeURIComponent(item.imageKey)}`;
+
+        // GET /image-url is public, so no login token is required.
+        fetch(requestUrl)
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error(
+                        `Image URL request failed: ${response.status}`
+                    );
+                }
+
+                return response.json();
+            })
+            .then(function (data) {
+                if (!data.imageUrl) {
+                    throw new Error(
+                        "Image URL missing from API response"
+                    );
+                }
+
+                // Assign the signed S3 URL.
+                // The browser will now download the image.
+                image.src = data.imageUrl;
+
+                // Handle images already available in the cache.
+                if (image.complete && image.naturalWidth > 0) {
+                    showImage();
+                }
+            })
+            .catch(function (error) {
+                showImageError(error);
+            });
+
+        return wrapper;
     }
 
     // ======================================================
@@ -576,6 +690,7 @@ document.addEventListener("DOMContentLoaded", function () {
         strong.textContent = label + " ";
 
         row.appendChild(strong);
+
         row.appendChild(
             document.createTextNode(String(value))
         );
@@ -602,4 +717,5 @@ document.addEventListener("DOMContentLoaded", function () {
 
         container.appendChild(wrapper);
     }
+
 });
