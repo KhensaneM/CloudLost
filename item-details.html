@@ -32,6 +32,50 @@
         </div>
     </section>
 
+    <!-- CLAIM AN ITEM SECTION -->
+    <section id="claim-section" class="item-card" hidden>
+
+        <h2>Claim This Item</h2>
+
+        <p>
+            Is this your lost item? Submit a claim explaining
+            how you can prove ownership.
+        </p>
+
+        <form id="claim-form">
+
+            <label for="claim-explanation">
+                Explain why this item belongs to you
+            </label>
+
+            <textarea
+                id="claim-explanation"
+                name="explanation"
+                rows="5"
+                minlength="20"
+                maxlength="1000"
+                required
+                placeholder="Describe unique details about the item that only its owner would know."
+            ></textarea>
+
+            <p>
+                Your explanation must contain between
+                20 and 1000 characters.
+            </p>
+
+            <button
+                type="submit"
+                class="btn btn-browse"
+            >
+                Submit Claim
+            </button>
+
+        </form>
+
+        <p id="claim-message" role="status" aria-live="polite"></p>
+
+    </section>
+
     <a href="items.html" class="btn btn-browse">
         ← Back to Browse Items
     </a>
@@ -42,6 +86,8 @@
     <p>© 2026 CloudLost | Cloud-Based Lost & Found System</p>
 </footer>
 
+<!-- Authentication must load before the application -->
+<script src="js/auth.js"></script>
 <script src="js/app.js"></script>
 
 </body>

@@ -1,15 +1,14 @@
 
 document.addEventListener("DOMContentLoaded", function () {
-
     const API_BASE =
         "https://jjce2az1hl.execute-api.eu-north-1.amazonaws.com";
 
     const API_URL = `${API_BASE}/items`;
     const UPLOAD_URL = `${API_BASE}/upload-url`;
     const IMAGE_URL_ENDPOINT = `${API_BASE}/image-url`;
+    const CLAIMS_URL = `${API_BASE}/claims`;
 
     const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-
     const ALLOWED_IMAGE_TYPES = [
         "image/jpeg",
         "image/png",
@@ -110,9 +109,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
                 if (imageFile.size === 0) {
-                    setFormMessage(
-                        "The selected image is empty."
-                    );
+                    setFormMessage("The selected image is empty.");
                     return;
                 }
             }
@@ -168,7 +165,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 const result = await response.json();
 
                 console.log("AWS Response:", result);
-
                 setFormMessage("Item reported successfully!");
 
             } catch (error) {
@@ -284,7 +280,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             const result = await response.json();
-
             allItems = result.items || [];
 
             filterItems();
@@ -428,7 +423,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             itemCard.appendChild(cardHeader);
 
-            // Display an image for reports with an image key.
             if (item.imageKey) {
                 itemCard.appendChild(createItemImage(item));
             }
@@ -450,6 +444,20 @@ document.addEventListener("DOMContentLoaded", function () {
     const itemDetailsContainer =
         document.getElementById("item-details-container");
 
+    const claimSection =
+        document.getElementById("claim-section");
+
+    const claimForm =
+        document.getElementById("claim-form");
+
+    const claimExplanation =
+        document.getElementById("claim-explanation");
+
+    const claimMessage =
+        document.getElementById("claim-message");
+
+    let currentItem = null;
+
     if (itemDetailsContainer) {
         loadItemDetails();
     }
@@ -459,6 +467,12 @@ document.addEventListener("DOMContentLoaded", function () {
             new URLSearchParams(window.location.search);
 
         const itemId = params.get("id");
+
+        if (claimSection) {
+            claimSection.hidden = true;
+        }
+
+        currentItem = null;
 
         if (!itemId) {
             showMessage(
@@ -492,7 +506,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
+            currentItem = selectedItem;
+
             displayItemDetails(selectedItem);
+            setupClaimSection(selectedItem);
 
         } catch (error) {
             console.error("Error loading item details:", error);
@@ -570,7 +587,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         card.appendChild(header);
 
-        // Display a photo on the item details page.
         if (item.imageKey) {
             card.appendChild(createItemImage(item));
         }
@@ -584,7 +600,181 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ======================================================
-    // AWS S3 PUBLIC PHOTO DISPLAY - FIXED
+    // CLAIM AN ITEM
+    // ======================================================
+
+    function setupClaimSection(item) {
+        if (!claimSection) return;
+
+        const isFound =
+            String(item.type || "").toLowerCase() === "found";
+
+        const isOpen =
+            String(item.status || "OPEN").toUpperCase() === "OPEN";
+
+        const canClaim =
+            isFound && isOpen && Boolean(item.itemId);
+
+        claimSection.hidden = !canClaim;
+
+        if (claimMessage) {
+            claimMessage.textContent = "";
+        }
+
+        if (claimForm) {
+            claimForm.reset();
+
+            const submitButton =
+                claimForm.querySelector('button[type="submit"]');
+
+            if (submitButton) {
+                submitButton.disabled = false;
+            }
+        }
+    }
+
+    if (claimForm) {
+        claimForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            if (!currentItem) {
+                setClaimMessage("Item details are not available.");
+                return;
+            }
+
+            const isFound =
+                String(currentItem.type || "").toLowerCase() === "found";
+
+            const isOpen =
+                String(currentItem.status || "OPEN").toUpperCase() === "OPEN";
+
+            if (!isFound || !isOpen || !currentItem.itemId) {
+                setClaimMessage("This item cannot be claimed.");
+                return;
+            }
+
+            const token =
+                typeof getAccessToken === "function"
+                    ? getAccessToken()
+                    : null;
+
+            if (!token) {
+                setClaimMessage(
+                    "Please log in before submitting a claim."
+                );
+                return;
+            }
+
+            const explanation = claimExplanation
+                ? claimExplanation.value.trim()
+                : "";
+
+            if (explanation.length < 20) {
+                setClaimMessage(
+                    "Please enter at least 20 characters explaining ownership."
+                );
+                return;
+            }
+
+            if (explanation.length > 1000) {
+                setClaimMessage(
+                    "Your explanation cannot exceed 1000 characters."
+                );
+                return;
+            }
+
+            const submitButton =
+                claimForm.querySelector('button[type="submit"]');
+
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            setClaimMessage("Submitting your claim...");
+
+            try {
+                const response = await fetch(CLAIMS_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        itemId: String(currentItem.itemId),
+                        explanation: explanation
+                    })
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    setClaimMessage(
+                        "Your session has expired or is not authorized. Please log in again."
+                    );
+                    return;
+                }
+
+                let result = {};
+
+                try {
+                    result = await response.json();
+                } catch {
+                    // Handle responses without valid JSON.
+                }
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.message ||
+                        `Claim submission failed (${response.status})`
+                    );
+                }
+
+                setClaimMessage(
+                    "Claim submitted successfully! Your claim is pending review."
+                );
+
+                if (claimExplanation) {
+                    claimExplanation.value = "";
+                }
+
+                // Prevent accidental repeat submissions from this page.
+                if (submitButton) {
+                    submitButton.disabled = true;
+                }
+
+                console.log("Claim submitted:", {
+                    claimId: result.claimId,
+                    status: result.status
+                });
+
+            } catch (error) {
+                console.error("Error submitting claim:", error);
+
+                setClaimMessage(
+                    error.message ||
+                    "Unable to submit claim. Please try again."
+                );
+            } finally {
+                // Keep disabled after a successful submission.
+                if (
+                    submitButton &&
+                    claimMessage &&
+                    !claimMessage.textContent.startsWith(
+                        "Claim submitted successfully!"
+                    )
+                ) {
+                    submitButton.disabled = false;
+                }
+            }
+        });
+    }
+
+    function setClaimMessage(message) {
+        if (claimMessage) {
+            claimMessage.textContent = message;
+        }
+    }
+
+    // ======================================================
+    // AWS S3 PUBLIC PHOTO DISPLAY
     // ======================================================
 
     function createItemImage(item) {
@@ -595,9 +785,7 @@ document.addEventListener("DOMContentLoaded", function () {
         image.className = "item-photo";
         image.alt = `Photo of ${item.itemName || "reported item"}`;
 
-        // Important:
-        // A lazy image hidden with display:none may not load.
-        // Use eager loading to prevent this problem.
+        // Eager loading avoids the hidden lazy-image issue.
         image.loading = "eager";
         image.decoding = "async";
 
@@ -645,7 +833,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const requestUrl =
             `${IMAGE_URL_ENDPOINT}?imageKey=${encodeURIComponent(item.imageKey)}`;
 
-        // GET /image-url is public, so no login token is required.
+        // Public endpoint: no Cognito token needed.
         fetch(requestUrl)
             .then(function (response) {
                 if (!response.ok) {
@@ -663,11 +851,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
                 }
 
-                // Assign the signed S3 URL.
-                // The browser will now download the image.
                 image.src = data.imageUrl;
 
-                // Handle images already available in the cache.
                 if (image.complete && image.naturalWidth > 0) {
                     showImage();
                 }
@@ -717,5 +902,4 @@ document.addEventListener("DOMContentLoaded", function () {
 
         container.appendChild(wrapper);
     }
-
 });

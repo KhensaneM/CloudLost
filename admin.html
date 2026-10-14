@@ -1,0 +1,72 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | CloudLost</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+    <div class="logo">☁️ CloudLost</div>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="items.html">Browse Items</a>
+        <a href="report.html">Report Item</a>
+    </nav>
+</header>
+
+<main class="items-page">
+
+    <section class="items-header">
+        <h1>Claim Review Dashboard</h1>
+        <p>Review ownership claims submitted by CloudLost users.</p>
+    </section>
+
+    <section class="admin-stats">
+        <div class="item-card">
+            <h2 id="total-claims">0</h2>
+            <p>Total Claims</p>
+        </div>
+
+        <div class="item-card">
+            <h2 id="pending-claims">0</h2>
+            <p>Pending</p>
+        </div>
+
+        <div class="item-card">
+            <h2 id="approved-claims">0</h2>
+            <p>Approved</p>
+        </div>
+
+        <div class="item-card">
+            <h2 id="rejected-claims">0</h2>
+            <p>Rejected</p>
+        </div>
+    </section>
+
+    <section>
+        <h2>Submitted Claims</h2>
+
+        <p id="admin-message" role="status" aria-live="polite">
+            Loading claims...
+        </p>
+
+        <div id="claims-container" class="items-grid"></div>
+    </section>
+
+</main>
+
+<footer>
+    <p>© 2026 CloudLost | Cloud-Based Lost & Found System</p>
+</footer>
+
+<script src="js/auth.js"></script>
+<script src="js/admin.js"></script>
+
+</body>
+</html>
