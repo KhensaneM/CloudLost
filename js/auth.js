@@ -199,6 +199,68 @@ function getAccessToken() {
   return session ? session.accessToken : null;
 }
 
+// ---------- ADMIN ROLE CHECK ----------
+
+// Decode JWT payload for navigation display purposes.
+// Backend Lambda authorization remains the security boundary.
+function decodeTokenPayload(token) {
+  if (typeof token !== "string") {
+    return null;
+  }
+
+  try {
+    const parts = token.split(".");
+
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    const base64 = parts[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+
+    const decoded = atob(
+      base64.padEnd(
+        Math.ceil(base64.length / 4) * 4,
+        "="
+      )
+    );
+
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function isAdmin() {
+  const token = getAccessToken();
+
+  if (!token) {
+    return false;
+  }
+
+  const payload = decodeTokenPayload(token);
+
+  if (!payload) {
+    return false;
+  }
+
+  const groups = payload["cognito:groups"];
+
+  if (Array.isArray(groups)) {
+    return groups.includes("CloudLostAdmins");
+  }
+
+  if (typeof groups === "string") {
+    return groups
+      .split(",")
+      .map(group => group.trim())
+      .includes("CloudLostAdmins");
+  }
+
+  return false;
+}
+
 // ---------- OAUTH CALLBACK ----------
 
 async function handleOAuthCallback(
@@ -265,6 +327,7 @@ function buildLogoutUrl() {
 
 function logout() {
   clearSession();
+  updateAuthNavigation();
   window.location.assign(buildLogoutUrl());
 }
 
@@ -287,6 +350,27 @@ function updateAuthNavigation() {
   if (logoutButton) {
     logoutButton.hidden = !authenticated;
   }
+
+  // Show Admin Dashboard only for CloudLostAdmins.
+  const adminLinks = document.querySelectorAll(
+    ".admin-nav-link"
+  );
+
+  const administrator = authenticated && isAdmin();
+
+  adminLinks.forEach(link => {
+    link.hidden = !administrator;
+
+    if (administrator) {
+      link.setAttribute("aria-current",
+        window.location.pathname.endsWith("/admin.html")
+          ? "page"
+          : "false"
+      );
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
 }
 
 // ---------- BROWSER INITIALIZATION ----------
@@ -345,6 +429,8 @@ if (typeof module !== "undefined" && module.exports) {
     saveSession,
     getStoredSession,
     getAccessToken,
+    decodeTokenPayload,
+    isAdmin,
     clearSession,
     buildLogoutUrl,
     updateAuthNavigation
