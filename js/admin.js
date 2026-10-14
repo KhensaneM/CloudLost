@@ -20,8 +20,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     function createTextElement(tag, text) {
         const element = document.createElement(tag);
-        element.textContent = String(text || "");
+        element.textContent = String(text ?? "");
         return element;
+    }
+
+    function getToken() {
+        return typeof getAccessToken === "function"
+            ? getAccessToken()
+            : null;
     }
 
     function displayClaims(claims) {
@@ -101,63 +107,186 @@ document.addEventListener("DOMContentLoaded", async function () {
             );
 
             if (claim.status === "PENDING") {
+                const actions = document.createElement("div");
+                actions.className = "claim-actions";
+
+                const approveButton = document.createElement("button");
+                approveButton.type = "button";
+                approveButton.textContent = "Approve";
+                approveButton.className = "approve-button";
+
+                const rejectButton = document.createElement("button");
+                rejectButton.type = "button";
+                rejectButton.textContent = "Reject";
+                rejectButton.className = "reject-button";
+
                 const notice = createTextElement(
                     "p",
                     "Awaiting administrator review"
                 );
 
-                card.appendChild(notice);
+                approveButton.addEventListener("click", function () {
+                    reviewClaim(
+                        claim.claimId,
+                        "APPROVED",
+                        approveButton,
+                        rejectButton
+                    );
+                });
+
+                rejectButton.addEventListener("click", function () {
+                    reviewClaim(
+                        claim.claimId,
+                        "REJECTED",
+                        approveButton,
+                        rejectButton
+                    );
+                });
+
+                actions.append(approveButton, rejectButton);
+                card.append(notice, actions);
             }
 
             container.appendChild(card);
         });
     }
 
-    try {
-        const token =
-            typeof getAccessToken === "function"
-                ? getAccessToken()
-                : null;
+    async function reviewClaim(
+        claimId,
+        newStatus,
+        approveButton,
+        rejectButton
+    ) {
+        const action =
+            newStatus === "APPROVED" ? "approve" : "reject";
+
+        const confirmed = window.confirm(
+            `Are you sure you want to ${action} this claim?`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        const token = getToken();
+
+        if (!token) {
+            setMessage("Your session has expired. Please log in again.");
+            return;
+        }
+
+        approveButton.disabled = true;
+        rejectButton.disabled = true;
+
+        setMessage(`Processing claim ${action} request...`);
+
+        try {
+            const response = await fetch(
+                `${API_URL}/${encodeURIComponent(claimId)}`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        status: newStatus
+                    })
+                }
+            );
+
+            const data = await response.json();
+
+            if (response.status === 401) {
+                throw new Error(
+                    "Your session has expired. Please log in again."
+                );
+            }
+
+            if (response.status === 403) {
+                throw new Error(
+                    "Access denied. Administrator privileges required."
+                );
+            }
+
+            if (response.status === 409) {
+                throw new Error(
+                    "This claim has already been reviewed or no longer exists."
+                );
+            }
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message || "Unable to review claim."
+                );
+            }
+
+            await loadClaims();
+
+            setMessage(
+                `Claim ${newStatus.toLowerCase()} successfully!`
+            );
+
+        } catch (error) {
+            console.error("Claim review error:", error);
+            setMessage(error.message);
+
+            approveButton.disabled = false;
+            rejectButton.disabled = false;
+        }
+    }
+
+    async function loadClaims() {
+        const token = getToken();
 
         if (!token) {
             setMessage("Please log in to access the admin dashboard.");
             return;
         }
 
-        const response = await fetch(API_URL, {
-            headers: {
-                "Authorization": `Bearer ${token}`
+        try {
+            const response = await fetch(API_URL, {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (response.status === 403) {
+                setMessage(
+                    "Access denied. Only CloudLost administrators can view claims."
+                );
+                return;
             }
-        });
 
-        if (response.status === 403) {
-            setMessage(
-                "Access denied. Only CloudLost administrators can view claims."
-            );
-            return;
+            if (response.status === 401) {
+                setMessage(
+                    "Your session has expired. Please log in again."
+                );
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error("Unable to retrieve claims.");
+            }
+
+            const data = await response.json();
+
+            if (!Array.isArray(data.claims)) {
+                throw new Error("Invalid claims response.");
+            }
+
+            displayClaims(data.claims);
+
+        } catch (error) {
+            console.error("Admin dashboard error:", error);
+            setMessage("Unable to load claims. Please try again.");
+            throw error;
         }
+    }
 
-        if (response.status === 401) {
-            setMessage(
-                "Your session has expired. Please log in again."
-            );
-            return;
-        }
-
-        if (!response.ok) {
-            throw new Error("Unable to retrieve claims.");
-        }
-
-        const data = await response.json();
-
-        if (!Array.isArray(data.claims)) {
-            throw new Error("Invalid claims response.");
-        }
-
-        displayClaims(data.claims);
-
+    try {
+        await loadClaims();
     } catch (error) {
-        console.error("Admin dashboard error:", error);
-        setMessage("Unable to load claims. Please try again.");
+        // Error message is already displayed by loadClaims.
     }
 });

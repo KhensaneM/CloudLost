@@ -836,3 +836,41 @@ footer {
         padding: 50px 20px;
     }
 }
+
+/* CloudLost Admin Claim Review Buttons */
+
+.claim-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.claim-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.approve-button {
+    background-color: #16a34a;
+    color: white;
+}
+
+.reject-button {
+    background-color: #dc2626;
+    color: white;
+}
+
+.claim-actions button:hover {
+    opacity: 0.85;
+}
+
+.claim-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
