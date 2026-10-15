@@ -6,16 +6,30 @@ document.addEventListener("DOMContentLoaded", async function () {
     const container = document.getElementById("claims-container");
     const message = document.getElementById("admin-message");
 
-    function setMessage(text) {
+    let requestInProgress = false;
+
+    // =========================================
+    // HELPER FUNCTIONS
+    // =========================================
+
+    function setMessage(text, type = "info") {
         message.textContent = text;
+        message.dataset.type = type;
     }
 
     function updateCount(id, count) {
         const element = document.getElementById(id);
 
         if (element) {
-            element.textContent = count;
+            element.textContent = String(count);
         }
+    }
+
+    function resetCounts() {
+        updateCount("total-claims", 0);
+        updateCount("pending-claims", 0);
+        updateCount("approved-claims", 0);
+        updateCount("rejected-claims", 0);
     }
 
     function createTextElement(tag, text) {
@@ -30,133 +44,325 @@ document.addEventListener("DOMContentLoaded", async function () {
             : null;
     }
 
-    function displayClaims(claims) {
-        container.replaceChildren();
+    function formatDate(value) {
+        if (!value) {
+            return "Unknown";
+        }
 
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return String(value);
+        }
+
+        return date.toLocaleString("en-ZA", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    }
+
+    async function readResponse(response) {
+        try {
+            return await response.json();
+        } catch {
+            return {};
+        }
+    }
+
+    function getErrorMessage(status, data, fallback) {
+        if (status === 401) {
+            return "Your session has expired. Please log in again.";
+        }
+
+        if (status === 403) {
+            return "Access denied. Administrator privileges required.";
+        }
+
+        if (status === 404) {
+            return "The requested claim could not be found.";
+        }
+
+        if (status === 409) {
+            return (
+                "This claim cannot be reviewed because it has " +
+                "already been processed or the item is no longer available."
+            );
+        }
+
+        return data?.message || fallback;
+    }
+
+    // =========================================
+    // STATISTICS
+    // =========================================
+
+    function updateStatistics(claims) {
         updateCount("total-claims", claims.length);
 
         updateCount(
             "pending-claims",
-            claims.filter(claim => claim.status === "PENDING").length
+            claims.filter(
+                claim => claim.status === "PENDING"
+            ).length
         );
 
         updateCount(
             "approved-claims",
-            claims.filter(claim => claim.status === "APPROVED").length
+            claims.filter(
+                claim => claim.status === "APPROVED"
+            ).length
         );
 
         updateCount(
             "rejected-claims",
-            claims.filter(claim => claim.status === "REJECTED").length
+            claims.filter(
+                claim => claim.status === "REJECTED"
+            ).length
+        );
+    }
+
+    // =========================================
+    // CLAIM STATUS BADGE
+    // =========================================
+
+    function createStatusBadge(status) {
+        const badge = createTextElement(
+            "span",
+            status || "UNKNOWN"
         );
 
-        if (claims.length === 0) {
-            setMessage("No claims have been submitted yet.");
-            return;
+        badge.className = "claim-status";
+
+        if (status === "PENDING") {
+            badge.classList.add("pending");
+        } else if (status === "APPROVED") {
+            badge.classList.add("approved");
+        } else if (status === "REJECTED") {
+            badge.classList.add("rejected");
         }
 
-        setMessage("");
+        return badge;
+    }
 
-        claims.forEach(function (claim) {
-            const card = document.createElement("article");
-            card.className = "item-card";
+    // =========================================
+    // CLAIM CARD
+    // =========================================
 
-            const heading = createTextElement(
-                "h3",
-                "Claim " + claim.claimId
-            );
+    function createClaimCard(claim) {
+        const card = document.createElement("article");
+        card.className = "item-card";
 
-            const status = createTextElement(
+        const heading = createTextElement(
+            "h3",
+            "Claim " + (claim.claimId ?? "Unknown")
+        );
+
+        const status = createStatusBadge(claim.status);
+
+        const itemId = createTextElement(
+            "p",
+            "Item ID: " + (claim.itemId ?? "Unknown")
+        );
+
+        const userId = createTextElement(
+            "p",
+            "User ID: " + (claim.userId ?? "Unknown")
+        );
+
+        const explanationHeading = createTextElement(
+            "h4",
+            "Ownership Explanation"
+        );
+
+        const explanation = createTextElement(
+            "p",
+            claim.explanation || "No explanation provided."
+        );
+
+        const date = createTextElement(
+            "p",
+            "Submitted: " + formatDate(claim.createdAt)
+        );
+
+        card.append(
+            heading,
+            status,
+            itemId,
+            userId,
+            explanationHeading,
+            explanation,
+            date
+        );
+
+        // Display review information for processed claims.
+        if (
+            claim.status !== "PENDING" &&
+            claim.reviewedAt
+        ) {
+            const reviewed = createTextElement(
                 "p",
-                "Status: " + claim.status
+                "Reviewed: " + formatDate(claim.reviewedAt)
             );
 
-            const itemId = createTextElement(
+            card.appendChild(reviewed);
+        }
+
+        // Only pending claims can be reviewed.
+        if (claim.status === "PENDING") {
+            const notice = createTextElement(
                 "p",
-                "Item ID: " + claim.itemId
+                "Awaiting administrator review"
             );
 
-            const userId = createTextElement(
-                "p",
-                "User ID: " + claim.userId
-            );
+            const actions = document.createElement("div");
+            actions.className = "claim-actions";
 
-            const explanationHeading = createTextElement(
-                "h4",
-                "Ownership Explanation"
-            );
+            const approveButton = document.createElement("button");
+            approveButton.type = "button";
+            approveButton.className = "approve-button";
+            approveButton.textContent = "✓ Approve";
 
-            const explanation = createTextElement(
-                "p",
-                claim.explanation
-            );
+            const rejectButton = document.createElement("button");
+            rejectButton.type = "button";
+            rejectButton.className = "reject-button";
+            rejectButton.textContent = "✕ Reject";
 
-            const date = createTextElement(
-                "p",
-                "Submitted: " + claim.createdAt
+            approveButton.addEventListener("click", function () {
+                reviewClaim(
+                    claim.claimId,
+                    "APPROVED"
+                );
+            });
+
+            rejectButton.addEventListener("click", function () {
+                reviewClaim(
+                    claim.claimId,
+                    "REJECTED"
+                );
+            });
+
+            actions.append(
+                approveButton,
+                rejectButton
             );
 
             card.append(
-                heading,
-                status,
-                itemId,
-                userId,
-                explanationHeading,
-                explanation,
-                date
+                notice,
+                actions
             );
+        }
 
-            if (claim.status === "PENDING") {
-                const actions = document.createElement("div");
-                actions.className = "claim-actions";
-
-                const approveButton = document.createElement("button");
-                approveButton.type = "button";
-                approveButton.textContent = "Approve";
-                approveButton.className = "approve-button";
-
-                const rejectButton = document.createElement("button");
-                rejectButton.type = "button";
-                rejectButton.textContent = "Reject";
-                rejectButton.className = "reject-button";
-
-                const notice = createTextElement(
-                    "p",
-                    "Awaiting administrator review"
-                );
-
-                approveButton.addEventListener("click", function () {
-                    reviewClaim(
-                        claim.claimId,
-                        "APPROVED",
-                        approveButton,
-                        rejectButton
-                    );
-                });
-
-                rejectButton.addEventListener("click", function () {
-                    reviewClaim(
-                        claim.claimId,
-                        "REJECTED",
-                        approveButton,
-                        rejectButton
-                    );
-                });
-
-                actions.append(approveButton, rejectButton);
-                card.append(notice, actions);
-            }
-
-            container.appendChild(card);
-        });
+        return card;
     }
 
-    async function reviewClaim(
-        claimId,
-        newStatus,
-        approveButton,
-        rejectButton
-    ) {
+    // =========================================
+    // DISPLAY CLAIMS
+    // =========================================
+
+    function displayClaims(claims) {
+        container.replaceChildren();
+
+        updateStatistics(claims);
+
+        if (claims.length === 0) {
+            setMessage(
+                "No claims have been submitted yet.",
+                "info"
+            );
+            return;
+        }
+
+        // Pending claims appear first.
+        const sortedClaims = [...claims].sort((a, b) => {
+            if (
+                a.status === "PENDING" &&
+                b.status !== "PENDING"
+            ) {
+                return -1;
+            }
+
+            if (
+                b.status === "PENDING" &&
+                a.status !== "PENDING"
+            ) {
+                return 1;
+            }
+
+            const aTime = Date.parse(a.createdAt || "") || 0;
+            const bTime = Date.parse(b.createdAt || "") || 0;
+
+            return bTime - aTime;
+        });
+
+        const fragment = document.createDocumentFragment();
+
+        sortedClaims.forEach(function (claim) {
+            fragment.appendChild(createClaimCard(claim));
+        });
+
+        container.appendChild(fragment);
+
+        setMessage("");
+    }
+
+    // =========================================
+    // LOAD CLAIMS FROM AWS
+    // =========================================
+
+    async function loadClaims() {
+        const token = getToken();
+
+        if (!token) {
+            throw new Error(
+                "Please log in to access the admin dashboard."
+            );
+        }
+
+        const response = await fetch(API_URL, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await readResponse(response);
+
+        if (!response.ok) {
+            throw new Error(
+                getErrorMessage(
+                    response.status,
+                    data,
+                    "Unable to retrieve claims."
+                )
+            );
+        }
+
+        if (!Array.isArray(data.claims)) {
+            throw new Error(
+                "Invalid claims response from AWS."
+            );
+        }
+
+        displayClaims(data.claims);
+    }
+
+    // =========================================
+    // APPROVE OR REJECT CLAIM
+    // =========================================
+
+    async function reviewClaim(claimId, newStatus) {
+        if (requestInProgress) {
+            return;
+        }
+
+        if (!claimId) {
+            setMessage("Invalid claim ID.", "error");
+            return;
+        }
+
         const action =
             newStatus === "APPROVED" ? "approve" : "reject";
 
@@ -171,14 +377,29 @@ document.addEventListener("DOMContentLoaded", async function () {
         const token = getToken();
 
         if (!token) {
-            setMessage("Your session has expired. Please log in again.");
+            setMessage(
+                "Your session has expired. Please log in again.",
+                "error"
+            );
             return;
         }
 
-        approveButton.disabled = true;
-        rejectButton.disabled = true;
+        requestInProgress = true;
 
-        setMessage(`Processing claim ${action} request...`);
+        const actionButtons = container.querySelectorAll(
+            ".approve-button, .reject-button"
+        );
+
+        actionButtons.forEach(button => {
+            button.disabled = true;
+        });
+
+        setMessage(
+            `Processing ${action} request...`,
+            "info"
+        );
+
+        let reviewSucceeded = false;
 
         try {
             const response = await fetch(
@@ -195,98 +416,76 @@ document.addEventListener("DOMContentLoaded", async function () {
                 }
             );
 
-            const data = await response.json();
-
-            if (response.status === 401) {
-                throw new Error(
-                    "Your session has expired. Please log in again."
-                );
-            }
-
-            if (response.status === 403) {
-                throw new Error(
-                    "Access denied. Administrator privileges required."
-                );
-            }
-
-            if (response.status === 409) {
-                throw new Error(
-                    "This claim has already been reviewed or no longer exists."
-                );
-            }
+            const data = await readResponse(response);
 
             if (!response.ok) {
                 throw new Error(
-                    data.message || "Unable to review claim."
+                    getErrorMessage(
+                        response.status,
+                        data,
+                        "Unable to review claim."
+                    )
                 );
             }
 
+            reviewSucceeded = true;
+
+            // Reload claim cards and statistics.
             await loadClaims();
 
             setMessage(
-                `Claim ${newStatus.toLowerCase()} successfully!`
+                `Claim ${newStatus.toLowerCase()} successfully!`,
+                "success"
             );
 
         } catch (error) {
             console.error("Claim review error:", error);
-            setMessage(error.message);
 
-            approveButton.disabled = false;
-            rejectButton.disabled = false;
+            if (reviewSucceeded) {
+                setMessage(
+                    "The claim was reviewed successfully, but " +
+                    "the dashboard could not refresh. " +
+                    "Please reload the page.",
+                    "error"
+                );
+            } else {
+                setMessage(error.message, "error");
+            }
+
+        } finally {
+            requestInProgress = false;
+
+            // Re-enable buttons still present on the page.
+            container.querySelectorAll(
+                ".approve-button, .reject-button"
+            ).forEach(button => {
+                button.disabled = false;
+            });
         }
     }
 
-    async function loadClaims() {
-        const token = getToken();
+    // =========================================
+    // INITIALIZE ADMIN DASHBOARD
+    // =========================================
 
-        if (!token) {
-            setMessage("Please log in to access the admin dashboard.");
-            return;
-        }
+    async function initializeDashboard() {
+        resetCounts();
+        container.replaceChildren();
+
+        setMessage("Loading claims...", "info");
 
         try {
-            const response = await fetch(API_URL, {
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-
-            if (response.status === 403) {
-                setMessage(
-                    "Access denied. Only CloudLost administrators can view claims."
-                );
-                return;
-            }
-
-            if (response.status === 401) {
-                setMessage(
-                    "Your session has expired. Please log in again."
-                );
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error("Unable to retrieve claims.");
-            }
-
-            const data = await response.json();
-
-            if (!Array.isArray(data.claims)) {
-                throw new Error("Invalid claims response.");
-            }
-
-            displayClaims(data.claims);
-
+            await loadClaims();
         } catch (error) {
             console.error("Admin dashboard error:", error);
-            setMessage("Unable to load claims. Please try again.");
-            throw error;
+
+            setMessage(
+                error.message ||
+                "Unable to load claims. Please try again.",
+                "error"
+            );
         }
     }
 
-    try {
-        await loadClaims();
-    } catch (error) {
-        // Error message is already displayed by loadClaims.
-    }
+    await initializeDashboard();
 });

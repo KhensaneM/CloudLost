@@ -17,53 +17,119 @@
         <a href="index.html">Home</a>
         <a href="items.html">Browse Items</a>
         <a href="report.html">Report Item</a>
-        <a href="admin.html" class="admin-nav-link" hidden>Admin Dashboard</a>
+        <a href="admin.html"
+           class="admin-nav-link"
+           hidden>Admin Dashboard</a>
     </nav>
+
+    <div class="auth-buttons">
+        <button id="loginBtn" type="button">
+            Login / Register
+        </button>
+        <button id="logoutBtn" type="button" hidden>
+            Logout
+        </button>
+    </div>
 </header>
 
-<main class="items-page">
+<main class="items-page admin-page">
 
-    <section class="items-header">
-        <h1>Claim Review Dashboard</h1>
-        <p>Review ownership claims submitted by CloudLost users.</p>
+    <section class="admin-hero">
+        <div>
+            <span class="admin-eyebrow">
+                ☁️ CLOUDLOST MANAGEMENT
+            </span>
+
+            <h1>Admin Dashboard</h1>
+
+            <p>
+                Review ownership claims, manage requests,
+                and help reunite people with their belongings.
+            </p>
+        </div>
+
+        <span class="admin-role-badge">
+            🛡️ Administrator
+        </span>
     </section>
 
-    <section class="admin-stats">
-        <div class="item-card">
-            <h2 id="total-claims">0</h2>
-            <p>Total Claims</p>
-        </div>
+    <section class="admin-overview"
+             aria-label="Claim statistics">
 
-        <div class="item-card">
-            <h2 id="pending-claims">0</h2>
-            <p>Pending</p>
-        </div>
+        <div class="admin-stats">
 
-        <div class="item-card">
-            <h2 id="approved-claims">0</h2>
-            <p>Approved</p>
-        </div>
+            <article class="admin-stat-card stat-total">
+                <div class="stat-top">
+                    <span>Total Claims</span>
+                    <span class="stat-icon">📋</span>
+                </div>
+                <h2 id="total-claims">0</h2>
+                <p>All ownership requests</p>
+            </article>
 
-        <div class="item-card">
-            <h2 id="rejected-claims">0</h2>
-            <p>Rejected</p>
+            <article class="admin-stat-card stat-pending">
+                <div class="stat-top">
+                    <span>Pending Review</span>
+                    <span class="stat-icon">⏳</span>
+                </div>
+                <h2 id="pending-claims">0</h2>
+                <p>Waiting for a decision</p>
+            </article>
+
+            <article class="admin-stat-card stat-approved">
+                <div class="stat-top">
+                    <span>Approved</span>
+                    <span class="stat-icon">✅</span>
+                </div>
+                <h2 id="approved-claims">0</h2>
+                <p>Ownership claims accepted</p>
+            </article>
+
+            <article class="admin-stat-card stat-rejected">
+                <div class="stat-top">
+                    <span>Rejected</span>
+                    <span class="stat-icon">❌</span>
+                </div>
+                <h2 id="rejected-claims">0</h2>
+                <p>Ownership claims declined</p>
+            </article>
+
         </div>
     </section>
 
-    <section>
-        <h2>Submitted Claims</h2>
+    <section class="admin-claims-section">
+        <div class="admin-section-heading">
+            <div>
+                <h2>Ownership Claims</h2>
+                <p>
+                    Review submitted claims and make decisions
+                    on pending requests.
+                </p>
+            </div>
 
-        <p id="admin-message" role="status" aria-live="polite">
+            <span class="admin-section-tag">
+                Claim Management
+            </span>
+        </div>
+
+        <p id="admin-message"
+           class="admin-message"
+           role="status"
+           aria-live="polite">
             Loading claims...
         </p>
 
-        <div id="claims-container" class="items-grid"></div>
+        <div id="claims-container"
+             class="admin-claims-grid">
+        </div>
     </section>
 
 </main>
 
 <footer>
-    <p>© 2026 CloudLost | Cloud-Based Lost & Found System</p>
+    <p>
+        © 2026 CloudLost | Cloud-Based Lost &amp; Found System
+    </p>
 </footer>
 
 <script src="js/auth.js"></script>
