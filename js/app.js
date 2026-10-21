@@ -867,7 +867,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // ======================================================
     // SHARED HELPERS
     // ======================================================
-
     function createDetailRow(label, value) {
         const row = document.createElement("p");
 
@@ -882,7 +881,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         return row;
     }
-
     function showMessage(container, heading, message) {
         if (!container) return;
 
